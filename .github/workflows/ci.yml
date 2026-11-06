@@ -81,6 +81,11 @@ jobs:
             mkdir -p evidence
             APK=$(find ZipGo/ui -name "*.apk" | head -1)
             echo "APK=$APK"
+            adb kill-server || true
+            adb start-server
+            adb wait-for-device
+            adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 2; done'
+            sleep 5
             adb install -r "$APK"
             (adb shell screenrecord --time-limit 120 /sdcard/tao.mp4 &) || true
             adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1

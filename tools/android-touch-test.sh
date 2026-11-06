@@ -14,12 +14,25 @@ sleep 5
 adb install -r "$APK"
 (adb shell screenrecord --time-limit 120 /sdcard/tao.mp4 &) || true
 adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1
-sleep 18
-adb exec-out screencap -p > evidence/01_boot.png
+sleep 10
 PID=$(adb shell pidof com.taozip.app | tr -d '\r')
 if [ -z "$PID" ]; then echo "FAIL: 启动后进程不在"; exit 1; fi
-adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
-adb pull /sdcard/ui.xml evidence/01_ui.xml >/dev/null 2>&1 || true
+adb exec-out screencap -p > evidence/01_boot.png
+DEADLINE=$((SECONDS+300))
+FOUND=0
+while [ $SECONDS -lt $DEADLINE ]; do
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
+  adb pull /sdcard/ui.xml evidence/01_ui.xml >/dev/null 2>&1 || true
+  if grep -q "isn't responding" evidence/01_ui.xml 2>/dev/null; then
+    XY=$(python3 -c "import re;xml=open('evidence/01_ui.xml',encoding='utf-8').read();m=re.search(r'text=\"Wait\"[^>]*bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"',xml);print((int(m.group(1))+int(m.group(3)))//2,(int(m.group(2))+int(m.group(4)))//2) if m else None" 2>/dev/null)
+    if [ -n "$XY" ]; then adb shell input tap $XY; echo "ANR弹窗: 点Wait继续"; sleep 5; else sleep 5; fi
+    continue
+  fi
+  if grep -q "内部存储" evidence/01_ui.xml 2>/dev/null; then FOUND=1; break; fi
+  sleep 5
+done
+if [ "$FOUND" -ne 1 ]; then echo "FAIL: 等待超时主页未出现"; adb exec-out screencap -p > evidence/fail_timeout.png; adb pull /sdcard/ui.xml evidence/fail_ui.xml >/dev/null 2>&1 || true; exit 1; fi
+echo "主页已出现"
 python3 - <<'PYEOF'
 import re, sys
 xml = ''

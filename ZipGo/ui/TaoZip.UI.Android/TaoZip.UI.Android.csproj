@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <AndroidTargetSdkVersion>34</AndroidTargetSdkVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationId>com.taozip.app</ApplicationId>
+    <ApplicationVersion>47</ApplicationVersion>
+    <ApplicationDisplayVersion>2.27</ApplicationDisplayVersion>
+    <ApplicationTitle>TaoZip</ApplicationTitle>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+    <RootNamespace>TaoZip.UI.Android</RootNamespace>
+    <AssemblyName>TaoZip.UI.Android</AssemblyName>
+    <!-- 固定签名: 新包可覆盖安装 -->
+    <AndroidSigningKeyStore>$(MSBuildThisFileDirectory)..\..\keystore\debug.keystore</AndroidSigningKeyStore>
+    <AndroidSigningStorePass>android</AndroidSigningStorePass>
+    <AndroidSigningKeyAlias>androiddebugkey</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>android</AndroidSigningKeyPass>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TaoZip.Model\TaoZip.Model.csproj" />
+    <ProjectReference Include="..\..\src\TaoZip.BLL\TaoZip.BLL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Xamarin.AndroidX.Core" Version="1.13.5.4" />
+  </ItemGroup>
+
+</Project>

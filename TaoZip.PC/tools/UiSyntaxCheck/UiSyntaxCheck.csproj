@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 本地界面代码语法验证: 用类型桩编译 MainWindow.xaml.cs, 抓 C# 级错误 (不含 XAML 编译) -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <!-- 显式关闭隐式引用: 与真实 App 工程一致, 少写 using 必须在这里就报出来 (真机 CS0246 教训) -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <OutputPath>bin-check</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\ui\TaoZip.PC.App\MainWindow.xaml.cs" Link="MainWindow.xaml.cs" />
+    <Compile Include="..\..\ui\TaoZip.PC.App\ExtractWindow.xaml.cs" Link="ExtractWindow.xaml.cs" />
+    <Compile Include="..\..\ui\TaoZip.PC.App\CompressWindow.xaml.cs" Link="CompressWindow.xaml.cs" />
+    <Compile Include="..\..\ui\TaoZip.PC.App\App.xaml.cs" Link="App.xaml.cs" />
+    <Compile Include="..\..\ui\TaoZip.PC.App\ThemeService.cs" Link="ThemeService.cs" />
+    <Compile Include="..\..\ui\TaoZip.PC.App\TrayIcon.cs" Link="TrayIcon.cs" />
+    <Compile Include="..\..\ui\TaoZip.PC.App\AppIcon.cs" Link="AppIcon.cs" />
+    <ProjectReference Include="..\..\src\TaoZip.Core\TaoZip.Core.csproj" />
+  </ItemGroup>
+</Project>

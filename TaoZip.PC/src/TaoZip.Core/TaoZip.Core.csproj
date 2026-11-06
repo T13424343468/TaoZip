@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!-- 定板 1.00: 发布信息一律 Tao -->
+    <Product>TaoZip.Core</Product>
+    <Company>Tao</Company>
+    <Authors>Tao</Authors>
+    <Copyright>Copyright (c) 2026 Tao</Copyright>
+    <Version>1.0.4</Version>
+    <InformationalVersion>1.0.4</InformationalVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.50.7" />
+  </ItemGroup>
+</Project>

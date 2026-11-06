@@ -1,0 +1,57 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "UiSyntaxCheck/1.0.0": {
+        "dependencies": {
+          "TaoZip.Core": "1.0.2"
+        },
+        "runtime": {
+          "UiSyntaxCheck.dll": {}
+        }
+      },
+      "SharpCompress/0.50.7": {
+        "runtime": {
+          "lib/net8.0/SharpCompress.dll": {
+            "assemblyVersion": "0.50.7.0",
+            "fileVersion": "0.50.7.0"
+          }
+        }
+      },
+      "TaoZip.Core/1.0.2": {
+        "dependencies": {
+          "SharpCompress": "0.50.7"
+        },
+        "runtime": {
+          "TaoZip.Core.dll": {
+            "assemblyVersion": "1.0.2",
+            "fileVersion": "1.0.2.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "UiSyntaxCheck/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SharpCompress/0.50.7": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-amxjOlPKUFb33ohAVahPCCBHLtToYOOb6JGyM40q8DnT6KYoBLW1TtW6uLEXbv40S7ej6ikf6VmAXGBaFL6Klg==",
+      "path": "sharpcompress/0.50.7",
+      "hashPath": "sharpcompress.0.50.7.nupkg.sha512"
+    },
+    "TaoZip.Core/1.0.2": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

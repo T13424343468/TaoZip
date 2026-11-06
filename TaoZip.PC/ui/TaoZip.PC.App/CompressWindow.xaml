@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="TaoZip.PC.App.CompressWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="TaoZip 压缩">
+    <!-- v66 真人视角: 根板铺满整窗 (四周留白不再露系统默认黑底), 全部文字/进度条钉主题色 -->
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <!-- v86 真机定案: 固定宽度面板在窗口偏窄时整体左移出界, 左缘文字被裁。
+             改自适应撑满 (仅留边距), 窗口多窄内容都在界内, 从根上杜绝裁字。 -->
+        <StackPanel x:Name="BodyPanel" Margin="28,24,28,20" Spacing="14" VerticalAlignment="Top">
+            <TextBlock x:Name="TxtSummary" Text="" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <StackPanel Spacing="6">
+                <TextBlock Text="压缩包位置（默认当前文件夹，可修改）" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBox x:Name="TxtDest"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button x:Name="BtnBrowse" Content="浏览…" Click="OnBrowse" Padding="14,5"/>
+                <Button x:Name="BtnStart" Content="开始压缩" Click="OnStart" Padding="20,5"/>
+            </StackPanel>
+            <ProgressBar x:Name="BarProgress" Maximum="100" Value="0" Visibility="Collapsed"
+                         Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+            <!-- v82: 百分比与按钮改双栏, 文字占满余宽省略号收尾, 不再横向顶开按钮 -->
+            <StackPanel x:Name="PanelProgress" Visibility="Collapsed">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="TxtPercent" Text="准备中…" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Grid.Column="0"/>
+                    <Button x:Name="BtnBackground" Content="后台压缩" Click="OnBackground" Padding="14,5" VerticalAlignment="Center" Grid.Column="1"/>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

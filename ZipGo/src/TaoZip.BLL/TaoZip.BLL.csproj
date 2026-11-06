@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="TaoZip.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.50.7" />
+    <PackageReference Include="DotNetZip" Version="1.16.0" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TaoZip.Model\TaoZip.Model.csproj" />
+    <ProjectReference Include="..\TaoZip.DAL\TaoZip.DAL.csproj" />
+  </ItemGroup>
+</Project>

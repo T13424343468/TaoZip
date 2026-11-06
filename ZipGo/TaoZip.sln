@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaoZip.Model", "TaoZip.Model\TaoZip.Model.csproj", "{DC320B86-C1BB-4BB7-B72E-D641DD379F41}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaoZip.DAL", "TaoZip.DAL\TaoZip.DAL.csproj", "{11B265CD-9CF2-4361-A752-912813ADF071}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaoZip.BLL", "TaoZip.BLL\TaoZip.BLL.csproj", "{D0E32C35-B361-4AD4-A7AF-AF994CA66D9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaoZip.Tests", "TaoZip.Tests\TaoZip.Tests.csproj", "{E2906CD0-40A2-4413-942F-A4DD2D61A765}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DC320B86-C1BB-4BB7-B72E-D641DD379F41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC320B86-C1BB-4BB7-B72E-D641DD379F41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC320B86-C1BB-4BB7-B72E-D641DD379F41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC320B86-C1BB-4BB7-B72E-D641DD379F41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11B265CD-9CF2-4361-A752-912813ADF071}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11B265CD-9CF2-4361-A752-912813ADF071}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11B265CD-9CF2-4361-A752-912813ADF071}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11B265CD-9CF2-4361-A752-912813ADF071}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0E32C35-B361-4AD4-A7AF-AF994CA66D9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0E32C35-B361-4AD4-A7AF-AF994CA66D9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0E32C35-B361-4AD4-A7AF-AF994CA66D9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0E32C35-B361-4AD4-A7AF-AF994CA66D9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2906CD0-40A2-4413-942F-A4DD2D61A765}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2906CD0-40A2-4413-942F-A4DD2D61A765}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2906CD0-40A2-4413-942F-A4DD2D61A765}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2906CD0-40A2-4413-942F-A4DD2D61A765}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

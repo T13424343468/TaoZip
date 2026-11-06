@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>TaoZip.PC.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
+    <UseWinUI>true</UseWinUI>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <DefaultLanguage>zh-CN</DefaultLanguage>
+    <AssemblyName>TaoZip</AssemblyName>
+    <Version>1.0.4</Version>
+    <!-- 定板 1.00: 发布信息一律 Tao -->
+    <Product>TaoZip</Product>
+    <Company>Tao</Company>
+    <Authors>Tao</Authors>
+    <Copyright>Copyright (c) 2026 Tao</Copyright>
+    <InformationalVersion>1.0.4</InformationalVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240802000" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TaoZip.Core\TaoZip.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Link 指定拷到输出根目录 app.ico: 窗口 SetIcon 与安装器图标源都按根目录取 -->
+    <None Include="Resources\app.ico" Link="app.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- v79: 头部真图标, ms-appx:///Assets/app-icon.png 按输出目录解析 -->
+    <Content Include="Assets\app-icon.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

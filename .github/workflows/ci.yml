@@ -87,3 +87,34 @@ jobs:
         with:
           name: taozip-touch-evidence
           path: evidence/
+
+  pc-mouse-test:
+    name: PC 真人鼠标路径实测（Windows）
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: 云端出包（PC 界面工程, 自包含）
+        run: >
+          dotnet publish TaoZip.PC/ui/TaoZip.PC.App/TaoZip.PC.App.csproj -c Release -r win-x64
+          --self-contained true -p:WindowsAppSDKSelfContained=true -p:Platform=x64
+      - name: 定位发布目录
+        shell: pwsh
+        run: |
+          $pub = Get-ChildItem -Directory -Recurse -Path TaoZip.PC/ui/TaoZip.PC.App/bin |
+                 Where-Object { Test-Path (Join-Path $_.FullName 'TaoZip.exe') } |
+                 Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $pub) { throw "没找到含 TaoZip.exe 的发布目录" }
+          "EXE=$($pub.FullName)\TaoZip.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: 真人鼠标路径实测（打开/测试/解压/历史）
+        shell: pwsh
+        run: ./tools/pc-mouse-test.ps1 -ExePath $env:EXE
+      - name: 存档实测证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taozip-pc-mouse-evidence
+          path: evidence

@@ -49,5 +49,5 @@ jobs:
         run: dotnet workload install android
       - name: 编译安卓工程
         run: |
-          dotnet restore ZipGo/TaoZip.sln
+          dotnet restore ZipGo/ui/TaoZip.UI.Android/TaoZip.UI.Android.csproj
           dotnet build ZipGo/ui/TaoZip.UI.Android/TaoZip.UI.Android.csproj -c Release

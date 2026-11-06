@@ -67,8 +67,11 @@ jobs:
           java-version: '17'
       - name: 安装 Android 工作负载
         run: dotnet workload install android
-      - name: 云端出包（APK）
-        run: dotnet build ZipGo/ui/TaoZip.UI.Android/TaoZip.UI.Android.csproj -c Release
+      - name: 云端出包（APK，显式 publish 定位产物）
+        run: |
+          dotnet publish ZipGo/ui/TaoZip.UI.Android/TaoZip.UI.Android.csproj -c Release
+          echo "---- publish 产物 ----"
+          find ZipGo/ui -name "*.apk" -not -path "*/obj/*" || true
       - name: 云端真机装机 + 真人触控实测
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -79,7 +82,9 @@ jobs:
           script: |
             set -e
             mkdir -p evidence
-            APK=$(find ZipGo/ui -name "*.apk" | head -1)
+            APK=$(ls ZipGo/ui/TaoZip.UI.Android/bin/Release/*/publish/*.apk 2>/dev/null | head -1)
+            [ -z "$APK" ] && APK=$(find ZipGo/ui -name "*.apk" -not -path "*/obj/*" 2>/dev/null | head -1)
+            test -n "$APK" || { echo "FAIL: 未找到 APK 产物"; exit 1; }
             echo "APK=$APK"
             adb kill-server || true
             adb start-server

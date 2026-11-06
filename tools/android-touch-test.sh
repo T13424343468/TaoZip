@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
 mkdir -p evidence
-APK=$(ls ZipGo/ui/TaoZip.UI.Android/bin/Release/*/publish/com.taozip.app-Signed.apk 2>/dev/null | head -1)
+APK=$(find ZipGo/ui -path "*android-x64*" -name "*-Signed.apk" -not -path "*/obj/*" 2>/dev/null | head -1)
+[ -z "${APK:-}" ] && APK=$(ls ZipGo/ui/TaoZip.UI.Android/bin/Release/*/publish/com.taozip.app-Signed.apk 2>/dev/null | head -1)
 [ -z "${APK:-}" ] && APK=$(find ZipGo/ui -name "*-Signed.apk" -not -path "*/obj/*" 2>/dev/null | head -1)
 if [ -z "${APK:-}" ]; then echo "FAIL: 未找到 APK 产物"; exit 1; fi
 echo "APK=$APK"

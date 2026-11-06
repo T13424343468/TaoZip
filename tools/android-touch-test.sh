@@ -12,6 +12,9 @@ adb wait-for-device
 adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 2; done'
 sleep 5
 adb install -r "$APK"
+# 首启「所有文件访问」预授权（真机由用户首次同意一次; 云台等价预置, 不替代任何功能触控）
+adb shell appops set com.taozip.app MANAGE_EXTERNAL_STORAGE allow 2>/dev/null || true
+adb shell appops get com.taozip.app MANAGE_EXTERNAL_STORAGE || true
 (adb shell screenrecord --time-limit 120 /sdcard/tao.mp4 &) || true
 adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1
 sleep 10

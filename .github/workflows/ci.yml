@@ -118,3 +118,109 @@ jobs:
         with:
           name: taozip-pc-mouse-evidence
           path: evidence
+
+  pc-install-chain:
+    name: PC 安装链（MSI 打包/安装/覆盖升级/卸载/视觉）
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: 安装 WiX 打包工具
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 4.0.5
+          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.dotnet\tools"
+      - name: 云端出包（PC 界面工程, 自包含）
+        run: >
+          dotnet publish TaoZip.PC/ui/TaoZip.PC.App/TaoZip.PC.App.csproj -c Release -r win-x64
+          --self-contained true -p:WindowsAppSDKSelfContained=true -p:Platform=x64
+      - name: 定位发布目录
+        shell: pwsh
+        run: |
+          $pub = Get-ChildItem -Directory -Recurse -Path TaoZip.PC/ui/TaoZip.PC.App/bin |
+                 Where-Object { Test-Path (Join-Path $_.FullName 'TaoZip.exe') } |
+                 Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $pub) { throw "没找到含 TaoZip.exe 的发布目录" }
+          "PUBDIR=$($pub.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: MSI 打包（微信风格自绘向导）
+        shell: pwsh
+        run: ./tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out
+      - name: 安装包外观核验（体积/版本/图标源）
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path evidence | Out-Null
+          $msi = Get-Item out\*.msi
+          "MSI: $($msi.Name)  $([math]::Round($msi.Length/1MB,1)) MB" | Out-File evidence\msi-facts.txt
+          if ($msi.Length -lt 1MB) { throw "MSI 体积异常偏小, 可能打包空目录: $msi" }
+      - name: 静默安装（首装）
+        shell: pwsh
+        run: |
+          $msi = (Get-Item out\*.msi).FullName
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\install.log" -Wait -PassThru
+          if ($p.ExitCode -notin 0,3010) { Get-Content out\install.log -Tail 60; throw "首装失败 exit=$($p.ExitCode)" }
+          if (-not (Test-Path 'D:\Program Files\TaoZip\TaoZip.exe')) { throw "首装后安装目录没有 TaoZip.exe" }
+          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+                   Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
+          if (-not $unins) { throw "首装后没有卸载登记" }
+          "first-install: ok $($unins.GetValue('DisplayVersion'))" | Out-File evidence\msi-facts.txt -Append
+      - name: 覆盖安装（同版本 AllowSameVersionUpgrades）
+        shell: pwsh
+        run: |
+          $msi = (Get-Item out\*.msi).FullName
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\cover.log" -Wait -PassThru
+          if ($p.ExitCode -notin 0,3010) { Get-Content out\cover.log -Tail 60; throw "覆盖安装失败 exit=$($p.ExitCode)" }
+          "cover-install: ok" | Out-File evidence\msi-facts.txt -Append
+      - name: 升级安装（1.0.4 → 1.0.5 走 MajorUpgrade）
+        shell: pwsh
+        run: |
+          $env:TAOZIP_PKG_VERSION = '1.0.5'
+          ./tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out-upgrade
+          $msi = (Get-Item out-upgrade\*.msi).FullName
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\upgrade.log" -Wait -PassThru
+          if ($p.ExitCode -notin 0,3010) { Get-Content out\upgrade.log -Tail 60; throw "升级安装失败 exit=$($p.ExitCode)" }
+          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+                   Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
+          if (-not $unins) { throw "升级后没有卸载登记" }
+          if ($unins.GetValue('DisplayVersion') -ne '1.0.5') { throw "升级后版本不是 1.0.5: $($unins.GetValue('DisplayVersion'))" }
+          "upgrade: ok -> $($unins.GetValue('DisplayVersion'))" | Out-File evidence\msi-facts.txt -Append
+      - name: 卸载后核验（登记清空+目录清除）
+        shell: pwsh
+        run: |
+          $msi = (Get-Item out-upgrade\*.msi).FullName
+          $p = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /l*v out\uninstall.log" -Wait -PassThru
+          if ($p.ExitCode -notin 0,3010) { Get-Content out\uninstall.log -Tail 60; throw "卸载失败 exit=$($p.ExitCode)" }
+          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+                   Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
+          if ($unins) { throw "卸载后卸载登记仍在" }
+          if (Test-Path 'D:\Program Files\TaoZip') { throw "卸载后安装目录仍在" }
+          "uninstall: ok" | Out-File evidence\msi-facts.txt -Append
+      - name: 重装 + 装后视觉（启动/进程/截图）
+        shell: pwsh
+        run: |
+          $msi = (Get-Item out-upgrade\*.msi).FullName
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn" -Wait -PassThru
+          if ($p.ExitCode -notin 0,3010) { throw "重装失败 exit=$($p.ExitCode)" }
+          Start-Process 'D:\Program Files\TaoZip\TaoZip.exe'
+          Start-Sleep -Seconds 15
+          $proc = Get-Process TaoZip -ErrorAction SilentlyContinue
+          if (-not $proc) { throw "重装后进程未存活" }
+          Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap($b.Width, $b.Height)
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("$PWD\evidence\installed-app.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $g.Dispose(); $bmp.Dispose()
+          Stop-Process -Name TaoZip -Force -ErrorAction SilentlyContinue
+          "visual: ok" | Out-File evidence\msi-facts.txt -Append
+      - name: 存档安装链证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taozip-install-chain-evidence
+          path: |
+            evidence
+            out/*.log

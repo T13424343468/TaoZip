@@ -49,7 +49,7 @@ public sealed partial class ExtractWindow : Window
     }
 
     private bool _diagDone;
-    private void OnFirstActivated(object sender, WindowActivatedEventArgs e)
+    private void OnFirstActivated(object? sender, WindowActivatedEventArgs e)
     {
         if (_diagDone) return;
         _diagDone = true;
@@ -261,7 +261,7 @@ public sealed partial class ExtractWindow : Window
     }
 
     /// <summary>转入后台: 隐藏窗口, 托盘图标接管, 点图标唤起查看进度。</summary>
-    private void BtnBackground_Click(object sender, RoutedEventArgs e)
+    private void BtnBackground_Click(object? sender, RoutedEventArgs e)
     {
         if (_inTray) return; // 防连点重复触发托盘气泡
         if (_tray is null) _tray = new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this), "TaoZip 后台解压中 — 点击查看进度", ShowFromTray);

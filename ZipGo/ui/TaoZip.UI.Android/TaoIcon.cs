@@ -54,8 +54,8 @@ internal sealed class IconView : View
 
     protected override void OnDraw(Canvas? canvas)
     {
-        base.OnDraw(canvas);
         if (canvas == null) return;
+        base.OnDraw(canvas);
         // 24x24 视口等比缩放到视图实际大小
         float s = Math.Min(Width, Height) / 24f;
         canvas.Save();
@@ -81,7 +81,9 @@ internal sealed class IconView : View
 
             case IconKind.Archive:
                 var box = new global::Android.Graphics.Path();
-                box.AddRoundRect(new RectF(4, 4, 20, 20), 3, 3, global::Android.Graphics.Path.Direction.Cw);
+                // 绑定属性 Direction.Cw 标注可空（8604），取局部量判空后再传
+                var cw = global::Android.Graphics.Path.Direction.Cw;
+                if (cw != null) box.AddRoundRect(new RectF(4, 4, 20, 20), 3, 3, cw);
                 p.SetStyle(Paint.Style.Stroke);
                 c.DrawPath(box, p);
                 // 拉链：中缝三段短竖线 + 拉头方点

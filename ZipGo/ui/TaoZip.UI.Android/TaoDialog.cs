@@ -45,13 +45,14 @@ internal static class TaoDialog
         var d = new Dialog(ctxOwner);
         d.RequestWindowFeature((int)WindowFeatures.NoTitle);
         // 窗口底透明，遮罩交给窗口 DimAmount：内容层不再自叠暗色，杜绝卡片四周黑边
-        d.Window!.SetBackgroundDrawable(new ColorDrawable(global::Android.Graphics.Color.Transparent));
+        var dlgWin = d.Window!;
+        dlgWin.SetBackgroundDrawable(new ColorDrawable(global::Android.Graphics.Color.Transparent));
         d.SetContentView(WrapSheet(content));
-        var win = d.Window!.Attributes;
+        var win = dlgWin.Attributes;
         win.Width = (int)(ctxOwner.Resources!.DisplayMetrics!.WidthPixels * 0.86);
         win.Height = ViewGroup.LayoutParams.WrapContent;
         win.DimAmount = 0.45f;
-        d.Window.Attributes = win;
+        dlgWin.Attributes = win;
         return d;
     }
 

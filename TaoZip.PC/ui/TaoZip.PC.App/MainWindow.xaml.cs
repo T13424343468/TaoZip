@@ -55,7 +55,7 @@ public sealed partial class MainWindow : Window
     }
 
     private bool _diagDone;
-    private void OnFirstActivated(object sender, WindowActivatedEventArgs e)
+    private void OnFirstActivated(object? sender, WindowActivatedEventArgs e)
     {
         if (_diagDone) return;
         _diagDone = true;
@@ -345,7 +345,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>删除单条记录; 可勾选连同删除本地压缩包文件。</summary>
-    private async void OnHistDeleteRow(object sender, RoutedEventArgs e)
+    private async void OnHistDeleteRow(object? sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement fe || fe.Tag is not int idx) return;
         if (idx < 0 || idx >= _historyView.Count) return;

@@ -221,7 +221,11 @@ public static class ThemeService
     private static System.Collections.Generic.IEnumerable<Microsoft.UI.Xaml.DependencyObject> Enumerable(Microsoft.UI.Xaml.DependencyObject node)
     {
         var n = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(node);
-        for (var i = 0; i < n; i++) yield return Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(node, i);
+        for (var i = 0; i < n; i++)
+        {
+            // GetChild 在子项恰好被移除的极端时序可返回 null，过滤防可空警告与下游空引用
+            if (Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(node, i) is { } child) yield return child;
+        }
     }
 
     /// <summary>外部事件落盘（v68）: 子窗启动期异常等写进同一份 theme.log 便于对时序。</summary>

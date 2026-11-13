@@ -101,12 +101,13 @@ public class TrashActivity : Activity
     /// <summary>子页与主界面同景（2.7）：状态栏/导航栏随象取色，杜绝顶部一片黑。</summary>
     void ApplyEdge(View root)
     {
-        Window!.SetStatusBarColor(ThemeService.C(ThemeService.Key.PageBg));
-        Window.SetNavigationBarColor(ThemeService.C(ThemeService.Key.PageBg));
+        var win = Window!;
+        win.SetStatusBarColor(ThemeService.C(ThemeService.Key.PageBg));
+        win.SetNavigationBarColor(ThemeService.C(ThemeService.Key.PageBg));
         if (Build.VERSION.SdkInt >= BuildVersionCodes.P)
-            Window.Attributes.LayoutInDisplayCutoutMode = LayoutInDisplayCutoutMode.ShortEdges;
-        WindowCompat.SetDecorFitsSystemWindows(Window!, false);
-        var ctrl = WindowCompat.GetInsetsController(Window!, Window!.DecorView);
+            win.Attributes.LayoutInDisplayCutoutMode = LayoutInDisplayCutoutMode.ShortEdges;
+        WindowCompat.SetDecorFitsSystemWindows(win, false);
+        var ctrl = WindowCompat.GetInsetsController(win, win.DecorView);
         if (ctrl != null) ctrl.AppearanceLightStatusBars = !ThemeService.LightStatusIcons;
         ViewCompat.SetOnApplyWindowInsetsListener(root, new MainActivity.InsetsListener());
     }

@@ -66,7 +66,7 @@ public sealed partial class CompressWindow : Window
     }
 
     private bool _diagDone;
-    private void OnFirstActivated(object sender, WindowActivatedEventArgs e)
+    private void OnFirstActivated(object? sender, WindowActivatedEventArgs e)
     {
         if (_diagDone) return;
         _diagDone = true;
@@ -250,7 +250,7 @@ public sealed partial class CompressWindow : Window
     }
 
     // ---- 浏览: 选压缩包保存位置与名称 (v86: 失败不再无声, 提示可直接手输路径) ----
-    private async void OnBrowse(object sender, RoutedEventArgs e)
+    private async void OnBrowse(object? sender, RoutedEventArgs e)
     {
         Windows.Storage.Pickers.FileSavePicker picker;
         try
@@ -279,7 +279,7 @@ public sealed partial class CompressWindow : Window
     }
 
     // ---- 开始压缩 ----
-    private async void OnStart(object sender, RoutedEventArgs e)
+    private async void OnStart(object? sender, RoutedEventArgs e)
     {
         if (_started) return;
         var dest = TxtDest.Text.Trim().Trim('"');
@@ -409,7 +409,7 @@ public sealed partial class CompressWindow : Window
     }
 
     // ---- 转后台: 隐藏窗口, 托盘接管 ----
-    private void OnBackground(object sender, RoutedEventArgs e)
+    private void OnBackground(object? sender, RoutedEventArgs e)
     {
         if (_inTray || !_started || _done) return; // 未开始/已结束不进托盘
         if (_tray is null) _tray = new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this), "TaoZip 后台压缩中 — 点击查看进度", ShowFromTray);

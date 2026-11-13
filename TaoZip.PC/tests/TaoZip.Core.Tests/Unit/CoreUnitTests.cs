@@ -43,6 +43,8 @@ public class CoreUnitTests : IDisposable
         // 旧记录 (无 Sources 字段) 反序列化为空串, 不报错
         var legacy = "[{\"Time\":\"2026-11-03T10:00:00\",\"Action\":\"解压\",\"ArchivePath\":\"b.zip\",\"DestPath\":\"e/\",\"Ok\":true,\"Message\":\"\"}]";
         var parsed = global::System.Text.Json.JsonSerializer.Deserialize<global::System.Collections.Generic.List<HistoryEntry>>(legacy);
+        Assert.NotNull(parsed);
+        Assert.True(parsed.Count > 0);
         Assert.Equal("解压", parsed[0].Action);
         Assert.Equal("", parsed[0].Sources);
     }

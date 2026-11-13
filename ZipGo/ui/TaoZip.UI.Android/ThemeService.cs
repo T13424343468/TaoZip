@@ -74,7 +74,8 @@ internal static class ThemeService
         {
             var saved = ctx.GetSharedPreferences(PrefName, FileCreationMode.Private)
                 .GetString(PrefKey, null);
-            if (Enum.TryParse(saved, out Xiang x)) Current = x;
+            // 首次启动 saved 为 null：TryParse(null) 返回 false，落默认水墨象，属正常路径
+            if (saved != null && Enum.TryParse(saved, out Xiang x)) Current = x;
         }
         catch { Current = Xiang.Shuimo; }
     }
@@ -86,8 +87,8 @@ internal static class ThemeService
         Current = x;
         try
         {
-            ctx.GetSharedPreferences(PrefName, FileCreationMode.Private)
-                .Edit().PutString(PrefKey, x.ToString()).Apply();
+            var editor = ctx.GetSharedPreferences(PrefName, FileCreationMode.Private).Edit();
+            editor.PutString(PrefKey, x.ToString()).Apply();
         }
         catch { }
         return true;

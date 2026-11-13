@@ -214,12 +214,13 @@ public class MainActivity : Activity
     /// <summary>全面屏适配：内容延伸到系统栏之下，状态栏图标亮度随主题象。</summary>
     void ApplyEdgeToEdge()
     {
-        Window!.SetStatusBarColor(ThemeService.C(ThemeService.Key.PageBg));
-        Window.SetNavigationBarColor(ThemeService.C(ThemeService.Key.PageBg));
+        var win = Window!;
+        win.SetStatusBarColor(ThemeService.C(ThemeService.Key.PageBg));
+        win.SetNavigationBarColor(ThemeService.C(ThemeService.Key.PageBg));
         if (Build.VERSION.SdkInt >= BuildVersionCodes.P)
-            Window.Attributes.LayoutInDisplayCutoutMode = LayoutInDisplayCutoutMode.ShortEdges;
-        WindowCompat.SetDecorFitsSystemWindows(Window!, false);
-        var ctrl = WindowCompat.GetInsetsController(Window!, Window!.DecorView);
+            win.Attributes.LayoutInDisplayCutoutMode = LayoutInDisplayCutoutMode.ShortEdges;
+        WindowCompat.SetDecorFitsSystemWindows(win, false);
+        var ctrl = WindowCompat.GetInsetsController(win, win.DecorView);
         if (ctrl != null) ctrl.AppearanceLightStatusBars = !ThemeService.LightStatusIcons;
         ViewCompat.SetOnApplyWindowInsetsListener(_root, new InsetsListener());
     }
@@ -994,7 +995,7 @@ public class MainActivity : Activity
             return base.OnTouchEvent(ev);
         }
 
-        void CancelLongPress()
+        protected override void CancelLongPress()
         {
             if (_longPending != null) Handler!.RemoveCallbacks(_longPending);
         }

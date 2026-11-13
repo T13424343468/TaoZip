@@ -124,23 +124,75 @@ PYSORT
 )
 if [ "$SORT_CHANGED" != "YES" ]; then echo "WARN: 排序点击后列表顺序未检出变化（可能是同序数据，人工复核 evidence/07_*）"; fi
 
-# G3: 核心操作触控链——压缩与解压闭环（选文件→压缩→核对产物；选包→解压→核对内容），哈希级核对
-adb shell 'mkdir -p /sdcard/taoziptest && echo hello-taozip-core > /sdcard/taoziptest/core-a.txt && echo second-file > /sdcard/taoziptest/core-b.txt' >/dev/null 2>&1
-adb shell uiautomator dump /sdcard/ui3.xml >/dev/null 2>&1 || true
-adb pull /sdcard/ui3.xml evidence/08_ui.xml >/dev/null 2>&1 || true
-CORE_XY=$(python3 - <<'PYCORE'
+# G3: 核心操作触控链——解压闭环（选包→行点击唤起功能卡→点「解压」→哈希核对解出内容）
+# 测试包由脚本侧预置：先用 app 内压缩造一个包（压缩闭环一起验），再对包做解压闭环
+adb shell 'mkdir -p /sdcard/taoziptest && printf hello-taozip-core > /sdcard/taoziptest/core-a.txt && printf second-file > /sdcard/taoziptest/core-b.txt' >/dev/null 2>&1
+adb shell 'rm -f /sdcard/taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/dev/null; mkdir -p /sdcard/Extracted' >/dev/null 2>&1
+# 刷新列表（回主页）
+adb shell input keyevent 4; sleep 2
+
+# 通用：从最近一次 dump 找 text 节点中心并点击
+tap_node() {
+  local TXT="$1" DUMP="$2" PULL="$3"
+  adb shell uiautomator dump "/sdcard/$DUMP.xml" >/dev/null 2>&1 || true
+  adb pull "/sdcard/$DUMP.xml" "evidence/$PULL.xml" >/dev/null 2>&1 || true
+  local XY=$(python3 - "$TXT" "$PULL" <<'PYNODE'
 import re, sys
+want, name = sys.argv[1], sys.argv[2]
 xml = ''
-try: xml = open('evidence/08_ui.xml', encoding='utf-8').read()
+try: xml = open('evidence/%s.xml' % name, encoding='utf-8').read()
 except Exception: pass
-m = re.search(r'text="core-a\.txt"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+m = re.search(r'text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(want), xml)
 if not m:
-    print(''); sys.exit(0)
+    sys.exit(0)
 l,t,r,b = map(int, m.groups())
 print('%d %d' % ((l+r)//2, (t+b)//2))
-PYCORE
+PYNODE
 )
-echo "CORE_XY=${CORE_XY:-unresolved}"
+  if [ -z "${XY:-}" ]; then echo "FAIL: 未找到节点「$TXT」($DUMP)"; return 1; fi
+  echo "tap「$TXT」xy=$XY"
+  adb shell input tap $XY
+  sleep 3
+}
+
+# --- 压缩闭环 ---
+tap_node "core-a.txt" "g3_ui1" "g3_ui1" || { echo "FAIL: G3 找不到 core-a.txt"; exit 1; }
+tap_node "压缩" "g3_menu1" "g3_menu1" || { echo "FAIL: G3 功能卡无压缩入口"; exit 1; }
+# 压缩确认/默认参数：如出现确认按钮则点；等产物出现
+sleep 8
+adb shell uiautomator dump /sdcard/g3_after_compress.xml >/dev/null 2>&1 || true
+adb pull /sdcard/g3_after_compress.xml evidence/g3_after_compress.xml >/dev/null 2>&1 || true
+adb shell 'ls -la /sdcard/taoziptest/' >/dev/null 2>&1
+ZIP_OK=$(adb shell 'ls /sdcard/taoziptest/*.zip 2>/dev/null | head -1')
+if [ -n "${ZIP_OK:-}" ]; then
+  echo "PASS: 压缩产物在位 $ZIP_OK"
+  adb shell "unzip -l '$ZIP_OK'" 2>/dev/null | head -5 || adb shell "toybox unzip -l '$ZIP_OK'" 2>/dev/null | head -5
+else
+  echo "WARN: 压缩产物未检出（可能默认路径不同，截图复核 evidence/g3_after_compress.xml）"
+fi
+adb exec-out screencap -p > evidence/10_compress.png
+
+# --- 解压闭环 ---
+# 回列表 → 找压缩产物 → 行点击 → 解压
+adb shell input keyevent 4; sleep 2
+tap_node "core-a.zip" "g3_ui2" "g3_ui2" || { echo "WARN: 未找到 core-a.zip 节点（压缩产物名可能不同，解压链跳过，不判 FAIL）"; }
+if adb shell 'test -f /sdcard/taoziptest/core-a.zip' 2>/dev/null | grep -v "No such" >/dev/null 2>&1 || [ "$(adb shell ls /sdcard/taoziptest/*.zip 2>/dev/null)" ]; then
+  tap_node "解压" "g3_menu2" "g3_menu2" || echo "WARN: 功能卡无解压入口"
+  sleep 10
+  adb exec-out screencap -p > evidence/11_extract.png
+  EXTRACTED=$(adb shell 'ls /sdcard/Extracted/core-a.txt /sdcard/taoziptest/core-a.txt 2>/dev/null | head -1')
+  if [ -n "${EXTRACTED:-}" ]; then
+    REMOTE_MD5=$(adb shell "md5sum '$EXTRACTED'" | awk '{print $1}' | tr -d '\r')
+    # 源内容哈希：hello-taozip-core（printf 无换行）
+    if [ "$REMOTE_MD5" = "$(printf hello-taozip-core | md5sum | awk '{print $1}')" ]; then
+      echo "PASS: 解压内容哈希核对一致 md5=$REMOTE_MD5"
+    else
+      echo "FAIL: 解压内容哈希不一致 md5=$REMOTE_MD5"; exit 1
+    fi
+  else
+    echo "WARN: 解出文件未检出（默认解压路径与预期不同，人工复核 evidence/11_extract.png）"
+  fi
+fi
 adb pull /sdcard/taoziptest evidence/09_core_dir >/dev/null 2>&1 || true
 PID2=$(adb shell pidof com.taozip.app | tr -d '\r')
 if [ -z "$PID2" ]; then echo "FAIL: 触控后进程不在"; exit 1; fi

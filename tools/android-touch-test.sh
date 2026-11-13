@@ -130,7 +130,7 @@ if [ "$SORT_CHANGED" != "YES" ]; then echo "WARN: 排序点击后列表顺序未
 adb shell am force-stop com.taozip.app; sleep 2
 adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1; sleep 8
 adb shell 'while ! pidof com.taozip.app >/dev/null; do sleep 2; done'
-# 若 ANR 弹窗再点 Wait；随后轮询等待主页加载完成（taoziptest 目录出现在列表），不靠固定 sleep 赌时序
+# 若 ANR 弹窗再点 Wait；随后轮询等待主页加载完成（0taoziptest 目录出现在列表），不靠固定 sleep 赌时序
 G3_DEADLINE=$((SECONDS+120))
 G3_READY=0
 while [ $SECONDS -lt $G3_DEADLINE ]; do
@@ -156,10 +156,10 @@ PYANR
 done
 if [ "$G3_READY" -ne 1 ]; then echo "FAIL: 重启后 120 秒内主页（内部存储视图）未出现"; adb exec-out screencap -p > evidence/g3_fail_nav.png; exit 1; fi
 # 文件与目录就绪后强制校验
-adb shell 'mkdir -p /sdcard/taoziptest && printf hello-taozip-core > /sdcard/taoziptest/core-a.txt && printf second-file > /sdcard/taoziptest/core-b.txt' >/dev/null 2>&1
-adb shell 'rm -f /sdcard/taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/dev/null; mkdir -p /sdcard/Extracted' >/dev/null 2>&1
-if [ "$(adb shell ls /sdcard/taoziptest/core-a.txt 2>/dev/null | tr -d '\r')" = "" ]; then echo "FAIL: mkdir/写文件未生效（/sdcard 挂载异常）"; exit 1; fi
-echo "测试文件就绪: $(adb shell ls /sdcard/taoziptest/ | tr '\n' ' ')"
+adb shell 'mkdir -p /sdcard/0taoziptest && printf hello-taozip-core > /sdcard/0taoziptest/core-a.txt && printf second-file > /sdcard/0taoziptest/core-b.txt' >/dev/null 2>&1
+adb shell 'rm -f /sdcard/0taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/dev/null; mkdir -p /sdcard/Extracted' >/dev/null 2>&1
+if [ "$(adb shell ls /sdcard/0taoziptest/core-a.txt 2>/dev/null | tr -d '\r')" = "" ]; then echo "FAIL: mkdir/写文件未生效（/sdcard 挂载异常）"; exit 1; fi
+echo "测试文件就绪: $(adb shell ls /sdcard/0taoziptest/ | tr '\n' ' ')"
 # 刷新根目录列表：点「内部存储」存储卡片（SwitchMode+Navigate(RootDir)），让新文件进列表
 adb shell uiautomator dump /sdcard/g3_refresh.xml >/dev/null 2>&1 || true
 adb pull /sdcard/g3_refresh.xml evidence/g3_refresh.xml >/dev/null 2>&1 || true
@@ -184,7 +184,7 @@ import re, sys
 xml = ''
 try: xml = open('evidence/g3_nav2.xml', encoding='utf-8').read()
 except Exception: pass
-m = re.search(r'text="taoziptest"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+m = re.search(r'text="0taoziptest"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
 if not m:
     sys.exit(0)
 l,t,r,b = map(int, m.groups())
@@ -196,16 +196,16 @@ PYNAV
 done
 if [ -n "${NAV_XY:-}" ]; then
   adb shell input tap $NAV_XY; sleep 4
-  echo "已进入 taoziptest 目录 xy=$NAV_XY"
+  echo "已进入 0taoziptest 目录 xy=$NAV_XY"
 else
-  echo "FAIL: 刷新后列表中仍未找到 taoziptest 目录"
+  echo "FAIL: 刷新后列表中仍未找到 0taoziptest 目录"
   # 界面树全量 text 落日志，一次取证不再猜（三返换思路条款：证据先行）
   python3 - <<'PYDUMP'
 import re
 try: xml = open('evidence/g3_nav2.xml', encoding='utf-8').read()
 except Exception: xml = ''
 texts = [t for t in re.findall(r'text="([^"]+)"', xml) if t.strip()]
-print('DUMP_TEXTS=' + ' | '.join(texts[:40]))
+print('DUMP_TEXTS=' + ' | '.join(texts[:120]))
 PYDUMP
   adb exec-out screencap -p > evidence/g3_fail_nav2.png
   exit 1
@@ -242,8 +242,8 @@ tap_node "压缩" "g3_menu1" "g3_menu1" || { echo "FAIL: G3 功能卡无压缩�
 sleep 8
 adb shell uiautomator dump /sdcard/g3_after_compress.xml >/dev/null 2>&1 || true
 adb pull /sdcard/g3_after_compress.xml evidence/g3_after_compress.xml >/dev/null 2>&1 || true
-adb shell 'ls -la /sdcard/taoziptest/' >/dev/null 2>&1
-ZIP_OK=$(adb shell 'ls /sdcard/taoziptest/*.zip 2>/dev/null | head -1')
+adb shell 'ls -la /sdcard/0taoziptest/' >/dev/null 2>&1
+ZIP_OK=$(adb shell 'ls /sdcard/0taoziptest/*.zip 2>/dev/null | head -1')
 if [ -n "${ZIP_OK:-}" ]; then
   echo "PASS: 压缩产物在位 $ZIP_OK"
   adb shell "unzip -l '$ZIP_OK'" 2>/dev/null | head -5 || adb shell "toybox unzip -l '$ZIP_OK'" 2>/dev/null | head -5
@@ -256,11 +256,11 @@ adb exec-out screencap -p > evidence/10_compress.png
 # 回列表 → 找压缩产物 → 行点击 → 解压
 adb shell input keyevent 4; sleep 2
 tap_node "core-a.zip" "g3_ui2" "g3_ui2" || { echo "WARN: 未找到 core-a.zip 节点（压缩产物名可能不同，解压链跳过，不判 FAIL）"; }
-if adb shell 'test -f /sdcard/taoziptest/core-a.zip' 2>/dev/null | grep -v "No such" >/dev/null 2>&1 || [ "$(adb shell ls /sdcard/taoziptest/*.zip 2>/dev/null)" ]; then
+if adb shell 'test -f /sdcard/0taoziptest/core-a.zip' 2>/dev/null | grep -v "No such" >/dev/null 2>&1 || [ "$(adb shell ls /sdcard/0taoziptest/*.zip 2>/dev/null)" ]; then
   tap_node "解压" "g3_menu2" "g3_menu2" || echo "WARN: 功能卡无解压入口"
   sleep 10
   adb exec-out screencap -p > evidence/11_extract.png
-  EXTRACTED=$(adb shell 'ls /sdcard/Extracted/core-a.txt /sdcard/taoziptest/core-a.txt 2>/dev/null | head -1')
+  EXTRACTED=$(adb shell 'ls /sdcard/Extracted/core-a.txt /sdcard/0taoziptest/core-a.txt 2>/dev/null | head -1')
   if [ -n "${EXTRACTED:-}" ]; then
     REMOTE_MD5=$(adb shell "md5sum '$EXTRACTED'" | awk '{print $1}' | tr -d '\r')
     # 源内容哈希：hello-taozip-core（printf 无换行）
@@ -273,7 +273,7 @@ if adb shell 'test -f /sdcard/taoziptest/core-a.zip' 2>/dev/null | grep -v "No s
     echo "WARN: 解出文件未检出（默认解压路径与预期不同，人工复核 evidence/11_extract.png）"
   fi
 fi
-adb pull /sdcard/taoziptest evidence/09_core_dir >/dev/null 2>&1 || true
+adb pull /sdcard/0taoziptest evidence/09_core_dir >/dev/null 2>&1 || true
 PID2=$(adb shell pidof com.taozip.app | tr -d '\r')
 if [ -z "$PID2" ]; then echo "FAIL: 触控后进程不在"; exit 1; fi
 adb exec-out screencap -p > evidence/06_alive.png

@@ -236,23 +236,43 @@ PYNODE
 }
 
 
-# 点行右侧「更多」区域唤起功能卡（点行主体=打开/进目录，不是弹菜单；更多为 IconView 无文本无 content-desc，只能按行 bounds 右缘内缩坐标点击）
+# 点行右侧「更多」按钮唤起功能卡（r8 实锤：文本节点右缘仍在行主体内=打开文件；
+# 更多按钮 38dp 贴行尾（MainActivity 行布局 more 38dp+padding 6dp），须按行容器 bounds 右缘内缩）
 tap_row_more() {
   local TXT="$1" DUMP="$2" PULL="$3"
   adb shell uiautomator dump "/sdcard/$DUMP.xml" >/dev/null 2>&1 || true
   adb pull "/sdcard/$DUMP.xml" "evidence/$PULL.xml" >/dev/null 2>&1 || true
   local XY=$(python3 - "$TXT" "$PULL" <<'PYMORE'
-import re, sys
+import sys, xml.etree.ElementTree as ET
 want, name = sys.argv[1], sys.argv[2]
-xml = ''
-try: xml = open('evidence/%s.xml' % name, encoding='utf-8').read()
-except Exception: pass
-m = re.search(r'text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(want), xml)
-if not m:
-    sys.exit(0)
-l,t,r,b = map(int, m.groups())
-x = r - max(24, (r-l)//16)
-y = (t+b)//2
+try: tree = ET.parse('evidence/%s.xml' % name)
+except Exception: sys.exit(0)
+def pbn(s):
+    l,t = s.strip('[]').split('][')[0].split(',')
+    r,b = s.strip('[]').split('][')[1].split(',')
+    return int(l),int(t),int(r),int(b)
+node, path = None, []
+def walk(n, chain):
+    global node, path
+    if n.get('text') == want:
+        node, path = n, list(chain); return True
+    for c in n:
+        if walk(c, chain+[n]): return True
+    return False
+if not walk(tree.getroot(), []): sys.exit(0)
+tl,tt,tr,tb = pbn(node.get('bounds'))
+tw = tr - tl
+row = None
+for a in path:
+    if not a.get('bounds'): continue
+    al,at,ar,ab = pbn(a.get('bounds'))
+    if (ab-at) <= 120 and (ar-al) > tw:
+        row = (al,at,ar,ab)
+if row is None: sys.exit(0)
+rl,rt,rr,rb = row
+x = rr - max(16, (rr-rl)//10)
+y = (rt+rb)//2
+if not (tl <= x <= rr): sys.exit(0)
 print('%d %d' % (x, y))
 PYMORE
 )
@@ -265,7 +285,8 @@ PYMORE
 # --- 压缩闭环 ---
 tap_row_more "core-a.txt" "g3_ui1" "g3_ui1" || { echo "FAIL: G3 找不到 core-a.txt 行"; exit 1; }
 tap_node "压缩" "g3_menu1" "g3_menu1" || { echo "FAIL: G3 功能卡无压缩入口"; exit 1; }
-# 压缩确认/默认参数：如出现确认按钮则点；等产物出现
+# 压缩确认对话框：默认参数（zip/原名/不分卷）直接点「开始压缩」（TaoDialog 按钮为真 TextView）
+tap_node "开始压缩" "g3_confirm1" "g3_confirm1" || echo "WARN: 未检出「开始压缩」按钮（可能无确认框）"
 sleep 8
 adb shell uiautomator dump /sdcard/g3_after_compress.xml >/dev/null 2>&1 || true
 adb pull /sdcard/g3_after_compress.xml evidence/g3_after_compress.xml >/dev/null 2>&1 || true
@@ -285,6 +306,8 @@ adb shell input keyevent 4; sleep 2
 tap_row_more "core-a.zip" "g3_ui2" "g3_ui2" || { echo "WARN: 未找到 core-a.zip 行（压缩产物名可能不同，解压链跳过，不判 FAIL）"; }
 if adb shell 'test -f /sdcard/0taoziptest/core-a.zip' 2>/dev/null | grep -v "No such" >/dev/null 2>&1 || [ "$(adb shell ls /sdcard/0taoziptest/*.zip 2>/dev/null)" ]; then
   tap_node "解压" "g3_menu2" "g3_menu2" || echo "WARN: 功能卡无解压入口"
+  # 解压确认对话框：目标目录已预填当前目录，直接点「开始解压」
+  tap_node "开始解压" "g3_confirm2" "g3_confirm2" || echo "WARN: 未检出「开始解压」按钮"
   sleep 10
   adb exec-out screencap -p > evidence/11_extract.png
   EXTRACTED=$(adb shell 'ls /sdcard/Extracted/core-a.txt /sdcard/0taoziptest/core-a.txt 2>/dev/null | head -1')

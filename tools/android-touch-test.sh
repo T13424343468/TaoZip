@@ -41,7 +41,8 @@ import re, sys
 xml = ''
 try: xml = open('evidence/01_ui.xml', encoding='utf-8').read()
 except Exception: pass
-m = re.search(r'text="内部存储"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+# 前缀匹配：面包屑态 text 可能是「内部存储 / xxx」，与 grep 子串口径一致
+m = re.search(r'text="内部存储[^"]*"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
 if not m:
     print('FAIL: 未找到内部存储标题'); sys.exit(1)
 tl, tt, tr, tb = map(int, m.groups())

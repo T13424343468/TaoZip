@@ -128,8 +128,46 @@ if [ "$SORT_CHANGED" != "YES" ]; then echo "WARN: 排序点击后列表顺序未
 # 测试包由脚本侧预置：先用 app 内压缩造一个包（压缩闭环一起验），再对包做解压闭环
 adb shell 'mkdir -p /sdcard/taoziptest && printf hello-taozip-core > /sdcard/taoziptest/core-a.txt && printf second-file > /sdcard/taoziptest/core-b.txt' >/dev/null 2>&1
 adb shell 'rm -f /sdcard/taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/dev/null; mkdir -p /sdcard/Extracted' >/dev/null 2>&1
-# 刷新列表（回主页）
-adb shell input keyevent 4; sleep 2
+# 刷新列表：重启 app 回干净主页（清搜索态/返回栈，最稳），再进测试目录
+adb shell am force-stop com.taozip.app; sleep 2
+adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1; sleep 8
+adb shell 'while ! pidof com.taozip.app >/dev/null; do sleep 2; done'
+# 若 ANR 弹窗再点 Wait
+adb shell uiautomator dump /sdcard/g3_boot.xml >/dev/null 2>&1 || true
+adb pull /sdcard/g3_boot.xml evidence/g3_boot.xml >/dev/null 2>&1 || true
+ANR_XY=$(python3 - <<'PYANR'
+import re, sys
+xml = ''
+try: xml = open('evidence/g3_boot.xml', encoding='utf-8').read()
+except Exception: pass
+m = re.search(r'text="Wait"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+if not m: sys.exit(0)
+l,t,r,b = map(int, m.groups())
+print('%d %d' % ((l+r)//2, (t+b)//2))
+PYANR
+)
+[ -n "${ANR_XY:-}" ] && { adb shell input tap $ANR_XY; sleep 5; }
+adb shell uiautomator dump /sdcard/g3_nav.xml >/dev/null 2>&1 || true
+adb pull /sdcard/g3_nav.xml evidence/g3_nav.xml >/dev/null 2>&1 || true
+NAV_XY=$(python3 - <<'PYNAV'
+import re, sys
+xml = ''
+try: xml = open('evidence/g3_nav.xml', encoding='utf-8').read()
+except Exception: pass
+m = re.search(r'text="taoziptest"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+if not m:
+    sys.exit(0)
+l,t,r,b = map(int, m.groups())
+print('%d %d' % ((l+r)//2, (t+b)//2))
+PYNAV
+)
+if [ -n "${NAV_XY:-}" ]; then
+  adb shell input tap $NAV_XY; sleep 4
+  echo "已进入 taoziptest 目录 xy=$NAV_XY"
+else
+  echo "FAIL: 列表中未找到 taoziptest 目录（可能仍在搜索过滤态）"
+  exit 1
+fi
 
 # 通用：从最近一次 dump 找 text 节点中心并点击
 tap_node() {

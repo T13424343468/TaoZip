@@ -162,7 +162,7 @@ jobs:
           $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\install.log" -Wait -PassThru
           if ($p.ExitCode -notin 0,3010) { Get-Content out\install.log -Tail 60; throw "首装失败 exit=$($p.ExitCode)" }
           if (-not (Test-Path 'D:\Program Files\TaoZip\TaoZip.exe')) { throw "首装后安装目录没有 TaoZip.exe" }
-          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "首装后没有卸载登记" }
           "first-install: ok $($unins.GetValue('DisplayVersion'))" | Out-File evidence\msi-facts.txt -Append
@@ -181,7 +181,7 @@ jobs:
           $msi = (Get-Item out-upgrade\*.msi).FullName
           $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\upgrade.log" -Wait -PassThru
           if ($p.ExitCode -notin 0,3010) { Get-Content out\upgrade.log -Tail 60; throw "升级安装失败 exit=$($p.ExitCode)" }
-          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "升级后没有卸载登记" }
           if ($unins.GetValue('DisplayVersion') -ne '1.0.5') { throw "升级后版本不是 1.0.5: $($unins.GetValue('DisplayVersion'))" }
@@ -192,7 +192,7 @@ jobs:
           $msi = (Get-Item out-upgrade\*.msi).FullName
           $p = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /l*v out\uninstall.log" -Wait -PassThru
           if ($p.ExitCode -notin 0,3010) { Get-Content out\uninstall.log -Tail 60; throw "卸载失败 exit=$($p.ExitCode)" }
-          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+          $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if ($unins) { throw "卸载后卸载登记仍在" }
           if (Test-Path 'D:\Program Files\TaoZip') { throw "卸载后安装目录仍在" }

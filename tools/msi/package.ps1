@@ -1,4 +1,4 @@
-﻿# 生成 TaoZip 的 Windows 安装器 (.msi)
+﻿﻿# 生成 TaoZip 的 Windows 安装器 (.msi)
 # 特性: 微信风格自绘单页向导 (说明+同意勾选+安装目录+桌面快捷方式 同页完成);
 #       桌面快捷方式可选勾选, 开始菜单默认创建; 同版本可覆盖安装; 升级卸载。
 # 用法: powershell -File package.ps1 -PublishDir <publish目录> -OutDir <out目录>
@@ -206,7 +206,7 @@ if (-not (Test-Path $wixExe)) {
 $msi = Join-Path $OutDir "TaoZip-$PkgVersion-x64.msi"
 if (Test-Path $msi) { Remove-Item $msi -Force }
 Write-Host ("打包工具: $wixExe (" + (Get-Item $wixExe).Length + " bytes @ " + (Get-Item $wixExe).LastWriteTime + ")")
-& $wixExe build $wxsPath -pdbtype none -o $msi 2>&1 | Tee-Object -FilePath (Join-Path $env:TEMP "TaoZip.msi-build.log")
+& $wixExe build $wxsPath -arch x64 -pdbtype none -o $msi 2>&1 | Tee-Object -FilePath (Join-Path $env:TEMP "TaoZip.msi-build.log")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "打包配置已保存: $wxsPath (排错用, 请把此文件与上方完整报错一并发出)"
     throw "WiX 构建 msi 失败 (请确认本机已安装 .NET 8)"

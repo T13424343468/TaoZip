@@ -198,6 +198,14 @@ if [ -n "${NAV_XY:-}" ]; then
   echo "已进入 taoziptest 目录 xy=$NAV_XY"
 else
   echo "FAIL: 刷新后列表中仍未找到 taoziptest 目录"
+  # 界面树全量 text 落日志，一次取证不再猜（三返换思路条款：证据先行）
+  python3 - <<'PYDUMP'
+import re
+try: xml = open('evidence/g3_nav2.xml', encoding='utf-8').read()
+except Exception: xml = ''
+texts = [t for t in re.findall(r'text="([^"]+)"', xml) if t.strip()]
+print('DUMP_TEXTS=' + ' | '.join(texts[:40]))
+PYDUMP
   adb exec-out screencap -p > evidence/g3_fail_nav2.png
   exit 1
 fi

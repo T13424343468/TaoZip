@@ -124,11 +124,8 @@ PYSORT
 )
 if [ "$SORT_CHANGED" != "YES" ]; then echo "WARN: 排序点击后列表顺序未检出变化（可能是同序数据，人工复核 evidence/07_*）"; fi
 
-# G3: 核心操作触控链——解压闭环（选包→行点击唤起功能卡→点「解压」→哈希核对解出内容）
-# 测试包由脚本侧预置：先用 app 内压缩造一个包（压缩闭环一起验），再对包做解压闭环
-adb shell 'mkdir -p /sdcard/taoziptest && printf hello-taozip-core > /sdcard/taoziptest/core-a.txt && printf second-file > /sdcard/taoziptest/core-b.txt' >/dev/null 2>&1
-adb shell 'rm -f /sdcard/taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/dev/null; mkdir -p /sdcard/Extracted' >/dev/null 2>&1
-# 刷新列表：重启 app 回干净主页（清搜索态/返回栈，最稳），再进测试目录
+# G3: 核心操作触控链——压缩+解压闭环（选文件→压缩→核对产物；选包→解压→哈希核对内容）
+# 重启 app 回干净主页（清搜索态/返回栈），文件与目录在重启后创建（规避挂载/可见性时序），创建后强制校验
 adb shell am force-stop com.taozip.app; sleep 2
 adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1; sleep 8
 adb shell 'while ! pidof com.taozip.app >/dev/null; do sleep 2; done'
@@ -153,14 +150,38 @@ PYANR
     [ -n "${ANR_XY:-}" ] && { adb shell input tap $ANR_XY; sleep 5; }
     continue
   fi
-  if grep -q 'text="taoziptest"' evidence/g3_nav.xml 2>/dev/null; then G3_READY=1; break; fi
+  if grep -q 'text="内部存储"' evidence/g3_nav.xml 2>/dev/null; then G3_READY=1; break; fi
   sleep 5
 done
-if [ "$G3_READY" -ne 1 ]; then echo "FAIL: 重启后 120 秒内 taoziptest 目录未出现在列表"; exit 1; fi
-NAV_XY=$(python3 - <<'PYNAV'
+if [ "$G3_READY" -ne 1 ]; then echo "FAIL: 重启后 120 秒内主页（内部存储视图）未出现"; adb exec-out screencap -p > evidence/g3_fail_nav.png; exit 1; fi
+# 文件与目录就绪后强制校验
+adb shell 'mkdir -p /sdcard/taoziptest && printf hello-taozip-core > /sdcard/taoziptest/core-a.txt && printf second-file > /sdcard/taoziptest/core-b.txt' >/dev/null 2>&1
+adb shell 'rm -f /sdcard/taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/dev/null; mkdir -p /sdcard/Extracted' >/dev/null 2>&1
+if [ "$(adb shell ls /sdcard/taoziptest/core-a.txt 2>/dev/null | tr -d '\r')" = "" ]; then echo "FAIL: mkdir/写文件未生效（/sdcard 挂载异常）"; exit 1; fi
+echo "测试文件就绪: $(adb shell ls /sdcard/taoziptest/ | tr '\n' ' ')"
+# 刷新根目录列表：点「内部存储」存储卡片（SwitchMode+Navigate(RootDir)），让新文件进列表
+adb shell uiautomator dump /sdcard/g3_refresh.xml >/dev/null 2>&1 || true
+adb pull /sdcard/g3_refresh.xml evidence/g3_refresh.xml >/dev/null 2>&1 || true
+STORE_XY=$(python3 - <<'PYSTORE'
 import re, sys
 xml = ''
-try: xml = open('evidence/g3_nav.xml', encoding='utf-8').read()
+try: xml = open('evidence/g3_refresh.xml', encoding='utf-8').read()
+except Exception: pass
+m = re.search(r'text="内部存储"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+if not m: sys.exit(0)
+l,t,r,b = map(int, m.groups())
+print('%d %d' % ((l+r)//2, (t+b)//2))
+PYSTORE
+)
+if [ -n "${STORE_XY:-}" ]; then adb shell input tap $STORE_XY; sleep 4; echo "已点内部存储刷新列表"; fi
+NAV_XY=''
+for _try in 1 2 3; do
+  adb shell uiautomator dump /sdcard/g3_nav2.xml >/dev/null 2>&1 || true
+  adb pull /sdcard/g3_nav2.xml evidence/g3_nav2.xml >/dev/null 2>&1 || true
+  NAV_XY=$(python3 - <<'PYNAV'
+import re, sys
+xml = ''
+try: xml = open('evidence/g3_nav2.xml', encoding='utf-8').read()
 except Exception: pass
 m = re.search(r'text="taoziptest"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
 if not m:
@@ -169,11 +190,15 @@ l,t,r,b = map(int, m.groups())
 print('%d %d' % ((l+r)//2, (t+b)//2))
 PYNAV
 )
+  [ -n "$NAV_XY" ] && break
+  sleep 5
+done
 if [ -n "${NAV_XY:-}" ]; then
   adb shell input tap $NAV_XY; sleep 4
   echo "已进入 taoziptest 目录 xy=$NAV_XY"
 else
-  echo "FAIL: 列表中未找到 taoziptest 目录（可能仍在搜索过滤态）"
+  echo "FAIL: 刷新后列表中仍未找到 taoziptest 目录"
+  adb exec-out screencap -p > evidence/g3_fail_nav2.png
   exit 1
 fi
 

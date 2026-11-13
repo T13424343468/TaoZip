@@ -235,8 +235,35 @@ PYNODE
   sleep 3
 }
 
+
+# 点行右侧「更多」区域唤起功能卡（点行主体=打开/进目录，不是弹菜单；更多为 IconView 无文本无 content-desc，只能按行 bounds 右缘内缩坐标点击）
+tap_row_more() {
+  local TXT="$1" DUMP="$2" PULL="$3"
+  adb shell uiautomator dump "/sdcard/$DUMP.xml" >/dev/null 2>&1 || true
+  adb pull "/sdcard/$DUMP.xml" "evidence/$PULL.xml" >/dev/null 2>&1 || true
+  local XY=$(python3 - "$TXT" "$PULL" <<'PYMORE'
+import re, sys
+want, name = sys.argv[1], sys.argv[2]
+xml = ''
+try: xml = open('evidence/%s.xml' % name, encoding='utf-8').read()
+except Exception: pass
+m = re.search(r'text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(want), xml)
+if not m:
+    sys.exit(0)
+l,t,r,b = map(int, m.groups())
+x = r - max(24, (r-l)//16)
+y = (t+b)//2
+print('%d %d' % (x, y))
+PYMORE
+)
+  if [ -z "${XY:-}" ]; then echo "FAIL: 未找到行「$TXT」($DUMP)"; return 1; fi
+  echo "tap行更多「$TXT」xy=$XY"
+  adb shell input tap $XY
+  sleep 3
+}
+
 # --- 压缩闭环 ---
-tap_node "core-a.txt" "g3_ui1" "g3_ui1" || { echo "FAIL: G3 找不到 core-a.txt"; exit 1; }
+tap_row_more "core-a.txt" "g3_ui1" "g3_ui1" || { echo "FAIL: G3 找不到 core-a.txt 行"; exit 1; }
 tap_node "压缩" "g3_menu1" "g3_menu1" || { echo "FAIL: G3 功能卡无压缩入口"; exit 1; }
 # 压缩确认/默认参数：如出现确认按钮则点；等产物出现
 sleep 8
@@ -255,7 +282,7 @@ adb exec-out screencap -p > evidence/10_compress.png
 # --- 解压闭环 ---
 # 回列表 → 找压缩产物 → 行点击 → 解压
 adb shell input keyevent 4; sleep 2
-tap_node "core-a.zip" "g3_ui2" "g3_ui2" || { echo "WARN: 未找到 core-a.zip 节点（压缩产物名可能不同，解压链跳过，不判 FAIL）"; }
+tap_row_more "core-a.zip" "g3_ui2" "g3_ui2" || { echo "WARN: 未找到 core-a.zip 行（压缩产物名可能不同，解压链跳过，不判 FAIL）"; }
 if adb shell 'test -f /sdcard/0taoziptest/core-a.zip' 2>/dev/null | grep -v "No such" >/dev/null 2>&1 || [ "$(adb shell ls /sdcard/0taoziptest/*.zip 2>/dev/null)" ]; then
   tap_node "解压" "g3_menu2" "g3_menu2" || echo "WARN: 功能卡无解压入口"
   sleep 10

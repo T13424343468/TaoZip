@@ -1,4 +1,4 @@
-﻿﻿# 生成 TaoZip 的 Windows 安装器 (.msi)
+﻿# 生成 TaoZip 的 Windows 安装器 (.msi)
 # 特性: 微信风格自绘单页向导 (说明+同意勾选+安装目录+桌面快捷方式 同页完成);
 #       桌面快捷方式可选勾选, 开始菜单默认创建; 同版本可覆盖安装; 升级卸载。
 # 用法: powershell -File package.ps1 -PublishDir <publish目录> -OutDir <out目录>

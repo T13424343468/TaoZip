@@ -132,13 +132,17 @@ adb shell 'rm -f /sdcard/taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/d
 adb shell am force-stop com.taozip.app; sleep 2
 adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1; sleep 8
 adb shell 'while ! pidof com.taozip.app >/dev/null; do sleep 2; done'
-# 若 ANR 弹窗再点 Wait
-adb shell uiautomator dump /sdcard/g3_boot.xml >/dev/null 2>&1 || true
-adb pull /sdcard/g3_boot.xml evidence/g3_boot.xml >/dev/null 2>&1 || true
-ANR_XY=$(python3 - <<'PYANR'
+# 若 ANR 弹窗再点 Wait；随后轮询等待主页加载完成（taoziptest 目录出现在列表），不靠固定 sleep 赌时序
+G3_DEADLINE=$((SECONDS+120))
+G3_READY=0
+while [ $SECONDS -lt $G3_DEADLINE ]; do
+  adb shell uiautomator dump /sdcard/g3_nav.xml >/dev/null 2>&1 || true
+  adb pull /sdcard/g3_nav.xml evidence/g3_nav.xml >/dev/null 2>&1 || true
+  if grep -q "isn't responding" evidence/g3_nav.xml 2>/dev/null; then
+    ANR_XY=$(python3 - <<'PYANR'
 import re, sys
 xml = ''
-try: xml = open('evidence/g3_boot.xml', encoding='utf-8').read()
+try: xml = open('evidence/g3_nav.xml', encoding='utf-8').read()
 except Exception: pass
 m = re.search(r'text="Wait"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
 if not m: sys.exit(0)
@@ -146,9 +150,13 @@ l,t,r,b = map(int, m.groups())
 print('%d %d' % ((l+r)//2, (t+b)//2))
 PYANR
 )
-[ -n "${ANR_XY:-}" ] && { adb shell input tap $ANR_XY; sleep 5; }
-adb shell uiautomator dump /sdcard/g3_nav.xml >/dev/null 2>&1 || true
-adb pull /sdcard/g3_nav.xml evidence/g3_nav.xml >/dev/null 2>&1 || true
+    [ -n "${ANR_XY:-}" ] && { adb shell input tap $ANR_XY; sleep 5; }
+    continue
+  fi
+  if grep -q 'text="taoziptest"' evidence/g3_nav.xml 2>/dev/null; then G3_READY=1; break; fi
+  sleep 5
+done
+if [ "$G3_READY" -ne 1 ]; then echo "FAIL: 重启后 120 秒内 taoziptest 目录未出现在列表"; exit 1; fi
 NAV_XY=$(python3 - <<'PYNAV'
 import re, sys
 xml = ''

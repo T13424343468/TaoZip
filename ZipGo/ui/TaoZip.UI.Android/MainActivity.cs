@@ -995,7 +995,7 @@ public class MainActivity : Activity
             return base.OnTouchEvent(ev);
         }
 
-        protected override void CancelLongPress()
+        public override void CancelLongPress()
         {
             if (_longPending != null) Handler!.RemoveCallbacks(_longPending);
         }

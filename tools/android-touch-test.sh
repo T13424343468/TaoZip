@@ -21,20 +21,38 @@ sleep 10
 PID=$(adb shell pidof com.taozip.app | tr -d '\r')
 if [ -z "$PID" ]; then echo "FAIL: 启动后进程不在"; exit 1; fi
 adb exec-out screencap -p > evidence/01_boot.png
-DEADLINE=$((SECONDS+300))
+# 失败取证: logcat+界面树+截图一次归档(云测红2 教训: 失败路径只有截图, ANR 风暴无从归因)
+fail_collect() {
+  adb logcat -d > evidence/$1_logcat.txt 2>&1 || true
+  adb shell uiautomator dump /sdcard/$1_ui.xml >/dev/null 2>&1 || true
+  adb pull /sdcard/$1_ui.xml evidence/$1_ui.xml >/dev/null 2>&1 || true
+  adb exec-out screencap -p > evidence/$1_screen.png
+}
+# 主页等待余量 300s -> 900s 封顶(慢机软渲染极端场景, 13:35 run 15 连 ANR 5 分半耗尽); ANR 连续超 8 次冷重启应用一次再等
+DEADLINE=$((SECONDS+900))
 FOUND=0
+ANR_COUNT=0
+RELAUNCHED=0
 while [ $SECONDS -lt $DEADLINE ]; do
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
   adb pull /sdcard/ui.xml evidence/01_ui.xml >/dev/null 2>&1 || true
   if grep -q "isn't responding" evidence/01_ui.xml 2>/dev/null; then
+    ANR_COUNT=$((ANR_COUNT+1))
     XY=$(python3 -c "import re;xml=open('evidence/01_ui.xml',encoding='utf-8').read();m=re.search(r'text=\"Wait\"[^>]*bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"',xml);print((int(m.group(1))+int(m.group(3)))//2,(int(m.group(2))+int(m.group(4)))//2) if m else None" 2>/dev/null)
-    if [ -n "$XY" ]; then adb shell input tap $XY; echo "ANR弹窗: 点Wait继续"; sleep 5; else sleep 5; fi
+    if [ -n "$XY" ]; then adb shell input tap $XY; echo "ANR弹窗#$ANR_COUNT: 点Wait继续"; sleep 5; else sleep 5; fi
+    if [ $ANR_COUNT -ge 8 ] && [ $RELAUNCHED -eq 0 ]; then
+      echo "ANR 连续 $ANR_COUNT 次超上限, 冷重启应用一次再等"
+      adb shell am force-stop com.taozip.app; sleep 3
+      adb shell monkey -p com.taozip.app -c android.intent.category.LAUNCHER 1; sleep 10
+      ANR_COUNT=0
+      RELAUNCHED=1
+    fi
     continue
   fi
   if grep -q "内部存储" evidence/01_ui.xml 2>/dev/null; then FOUND=1; break; fi
   sleep 5
 done
-if [ "$FOUND" -ne 1 ]; then echo "FAIL: 等待超时主页未出现"; adb exec-out screencap -p > evidence/fail_timeout.png; adb pull /sdcard/ui.xml evidence/fail_ui.xml >/dev/null 2>&1 || true; exit 1; fi
+if [ "$FOUND" -ne 1 ]; then echo "FAIL: 等待超时主页未出现"; fail_collect fail_home; exit 1; fi
 echo "主页已出现"
 python3 - <<'PYEOF'
 import re, sys
@@ -154,7 +172,7 @@ PYANR
   if grep -q 'text="内部存储"' evidence/g3_nav.xml 2>/dev/null; then G3_READY=1; break; fi
   sleep 5
 done
-if [ "$G3_READY" -ne 1 ]; then echo "FAIL: 重启后 120 秒内主页（内部存储视图）未出现"; adb exec-out screencap -p > evidence/g3_fail_nav.png; exit 1; fi
+if [ "$G3_READY" -ne 1 ]; then echo "FAIL: 重启后 120 秒内主页（内部存储视图）未出现"; fail_collect g3_fail; exit 1; fi
 # 文件与目录就绪后强制校验
 adb shell 'mkdir -p /sdcard/0taoziptest && printf hello-taozip-core > /sdcard/0taoziptest/core-a.txt && printf second-file > /sdcard/0taoziptest/core-b.txt' >/dev/null 2>&1
 adb shell 'rm -f /sdcard/0taoziptest/core-a.zip /sdcard/Extracted/core-a.txt 2>/dev/null; mkdir -p /sdcard/Extracted' >/dev/null 2>&1

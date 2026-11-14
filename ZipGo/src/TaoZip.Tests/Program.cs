@@ -1664,10 +1664,10 @@ public static class Program
         Assert.True(Regex.IsMatch(main, @"AnchorMenu\.Show\(this, anchor \?\? _logo, acts\.ToArray\(\)\);"),
             "排序功能卡未改靠右下呼出");
 
-        // 版本推进：47 / 2.27（版本递进不回退）
-        Assert.True(Regex.IsMatch(csproj, @"<ApplicationVersion>(4[7-9]|[5-9]\d)</ApplicationVersion>")
-            && Regex.IsMatch(csproj, @"<ApplicationDisplayVersion>2\.(2[7-9]|[3-9]\d)</ApplicationDisplayVersion>"), "版本号未升到 2.27");
-        Assert.True(main.Contains("\"TaoZip 2.27（安卓）"), "关于页文案未同步 2.27");
+        // 版本推进：48 / 2.28（版本递进不回退）
+        Assert.True(Regex.IsMatch(csproj, @"<ApplicationVersion>(4[8-9]|[5-9]\d)</ApplicationVersion>")
+            && Regex.IsMatch(csproj, @"<ApplicationDisplayVersion>2\.(2[8-9]|[3-9]\d)</ApplicationDisplayVersion>"), "版本号未升到 2.28");
+        Assert.True(main.Contains("\"TaoZip 2.28（安卓）"), "关于页文案未同步 2.28");
         Console.WriteLine("压缩闪退根修与排序全链规则：源码断言全绿");
     }
 

@@ -408,7 +408,7 @@ public class MainActivity : Activity
     /// <summary>关于（2.12 改气泡卡：点关于图标弹出，点别处或再点即收，3 秒自动关闭）。</summary>
     void ShowAbout(View anchor)
         => AnchorMenu.ShowBubble(this, anchor,
-            "TaoZip 2.27（安卓）\n压缩：zip / tar / tar.gz\n解压：zip / 7z / rar(仅解压) / tar / gz / bz2 / xz\n压缩解压后台跑不中断，通知栏实时进度；顶栏任务清单随时唤起\n\n太极 · 拉链 —— 道法自然，收放自如。");
+            "TaoZip 2.28（安卓）\n压缩：zip / tar / tar.gz\n解压：zip / 7z / rar(仅解压) / tar / gz / bz2 / xz\n压缩解压后台跑不中断，通知栏实时进度；顶栏任务清单随时唤起\n\n太极 · 拉链 —— 道法自然，收放自如。");
 
     View _homeStrip = null!;
 

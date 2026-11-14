@@ -227,7 +227,7 @@ public sealed partial class MainWindow : Window
         await RunJob("解压", p => { var r = _svc.Extract(extractSrc, extractDest, p); return $"解压完成: {r.Files} 个文件 → {extractDest}"; }, extractDest);
     }
 
-    private void OnSmartExtract(object sender, RoutedEventArgs e)
+    private async void OnSmartExtract(object sender, RoutedEventArgs e)
     {
         if (_currentArchive == null) { Status("请先打开一个压缩包"); return; }
         string smartSrc = _currentArchive;

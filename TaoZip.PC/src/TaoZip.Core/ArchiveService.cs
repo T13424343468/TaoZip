@@ -305,7 +305,9 @@ public class ArchiveService
         var rel = entryName.Replace('\\', '/').TrimStart('/');
         foreach (var seg in rel.Split('/', StringSplitOptions.RemoveEmptyEntries))
             if (seg == "..") throw new InvalidFormatException($"压缩包含非法路径: {entryName}");
-        if (Path.IsPathRooted(rel)) throw new InvalidFormatException($"压缩包含非法路径: {entryName}");
+        // 根形态判定必须用原始条目名——TrimStart('/') 会把 /x 消毒成普通相对路径, 吞掉拒收判定 (2026-11-14 全测红根因)
+        if (entryName.StartsWith('/') || entryName.StartsWith('\\') || Path.IsPathRooted(entryName) || Path.IsPathRooted(rel))
+            throw new InvalidFormatException($"压缩包含非法路径: {entryName}");
         var destRoot = Path.GetFullPath(destDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                        + Path.DirectorySeparatorChar;
         var full = Path.GetFullPath(Path.Combine(destDir, rel));

@@ -1,4 +1,4 @@
-﻿name: taozip-ci
+name: taozip-ci
 
 on:
   push:
@@ -130,7 +130,7 @@ jobs:
   pc-install-chain:
     name: PC 安装链（MSI 打包/安装/覆盖升级/卸载/视觉）
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -167,8 +167,8 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-Item out\*.msi).FullName
-          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\install.log" -Wait -PassThru
-          if ($p.ExitCode -notin 0,3010) { Get-Content out\install.log -Tail 60; throw "首装失败 exit=$($p.ExitCode)" }
+          # msiexec 等待加 15 分钟封顶挂起守卫: run 43599577839 实锤引擎 5 秒装完、-Wait 等待层死等 38 分钟; 超时/失败抓日志尾部再 fail
+          ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\install.log" -LogPath out\install.log
           if (-not (Test-Path 'D:\Program Files\TaoZip\TaoZip.exe')) { throw "首装后安装目录没有 TaoZip.exe" }
           $ctx = Get-Item 'HKLM:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -ErrorAction SilentlyContinue
           if (-not $ctx) { throw "首装后右键解压登记缺失（.zip shell TaoZip.Extract）" }
@@ -182,8 +182,7 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-Item out\*.msi).FullName
-          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\cover.log" -Wait -PassThru
-          if ($p.ExitCode -notin 0,3010) { Get-Content out\cover.log -Tail 60; throw "覆盖安装失败 exit=$($p.ExitCode)" }
+          ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\cover.log" -LogPath out\cover.log
           "cover-install: ok" | Out-File evidence\msi-facts.txt -Append
       - name: 升级安装（1.0.5 同版本覆盖走 MajorUpgrade）
         shell: pwsh
@@ -191,8 +190,7 @@ jobs:
           $env:TAOZIP_PKG_VERSION = '1.0.5'
           ./tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out-upgrade
           $msi = (Get-Item out-upgrade\*.msi).FullName
-          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\upgrade.log" -Wait -PassThru
-          if ($p.ExitCode -notin 0,3010) { Get-Content out\upgrade.log -Tail 60; throw "升级安装失败 exit=$($p.ExitCode)" }
+          ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\upgrade.log" -LogPath out\upgrade.log
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "升级后没有卸载登记" }
@@ -202,8 +200,7 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-Item out-upgrade\*.msi).FullName
-          $p = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /l*v out\uninstall.log" -Wait -PassThru
-          if ($p.ExitCode -notin 0,3010) { Get-Content out\uninstall.log -Tail 60; throw "卸载失败 exit=$($p.ExitCode)" }
+          ./tools/msi/invoke-msi.ps1 -MsiArgs "/x `"$msi`" /qn /l*v out\uninstall.log" -LogPath out\uninstall.log
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if ($unins) { throw "卸载后卸载登记仍在" }
@@ -213,8 +210,7 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-Item out-upgrade\*.msi).FullName
-          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn" -Wait -PassThru
-          if ($p.ExitCode -notin 0,3010) { throw "重装失败 exit=$($p.ExitCode)" }
+          ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn" -LogPath out\install.log
           Start-Process 'D:\Program Files\TaoZip\TaoZip.exe'
           Start-Sleep -Seconds 15
           $proc = Get-Process TaoZip -ErrorAction SilentlyContinue

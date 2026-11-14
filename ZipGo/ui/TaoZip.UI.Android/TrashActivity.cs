@@ -104,7 +104,8 @@ public class TrashActivity : Activity
         var win = Window!;
         win.SetStatusBarColor(ThemeService.C(ThemeService.Key.PageBg));
         win.SetNavigationBarColor(ThemeService.C(ThemeService.Key.PageBg));
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.P)
+        // CA1416 归零: ShortEdges 需 API 28+, analyzer 认可的版本守卫写法(语义同 SdkInt>=P, 2026-11-14 云测红2 附带修复)
+        if (OperatingSystem.IsAndroidVersionAtLeast(28))
             win.Attributes.LayoutInDisplayCutoutMode = LayoutInDisplayCutoutMode.ShortEdges;
         WindowCompat.SetDecorFitsSystemWindows(win, false);
         var ctrl = WindowCompat.GetInsetsController(win, win.DecorView);

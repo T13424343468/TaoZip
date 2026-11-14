@@ -32,6 +32,10 @@ public class ArchiveService
     public void CreateZip(IEnumerable<string> paths, string destZip, IProgress<double>? progress = null)
     {
         var items = paths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+        // 兜底闸 (2026-11-14 审查红2): 目标包出现在待压缩清单里时, File.Create 会先把源截断为零再压空文件——源数据被毁, 必须拒绝
+        var destFull = Path.GetFullPath(destZip);
+        if (items.Any(p => string.Equals(Path.GetFullPath(p), destFull, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("压缩包不能就是所选文件本身, 请换个位置或名称。");
         var bp = new ByteProgress { Total = items.Sum(SizeOf), Report = progress };
         using var fs = File.Create(destZip);
         using var zip = new ZipArchive(fs, ZipArchiveMode.Create);
@@ -293,13 +297,21 @@ public class ArchiveService
         else throw new FileNotFoundException($"找不到要压缩的路径: {path}");
     }
 
-    /// <summary>防压缩包路径穿越 (ZipSlip): 条目路径必须落在解压目录内。</summary>
+    /// <summary>防压缩包路径穿越 (ZipSlip): 条目路径必须落在解压目录内。
+    /// 两道闸 (2026-11-14 审查红1): ① 盘符/根路径形态 (C:/x、C:x、/x) 直接拒绝——Path.Combine 遇到这类条目会丢弃目标目录;
+    /// ② 拼合取全路径后再核前缀, 双平台兜底, 防任何残余穿越形态落网。</summary>
     private static string SafePath(string entryName, string destDir)
     {
         var rel = entryName.Replace('\\', '/').TrimStart('/');
         foreach (var seg in rel.Split('/', StringSplitOptions.RemoveEmptyEntries))
             if (seg == "..") throw new InvalidFormatException($"压缩包含非法路径: {entryName}");
-        return Path.Combine(destDir, rel);
+        if (Path.IsPathRooted(rel)) throw new InvalidFormatException($"压缩包含非法路径: {entryName}");
+        var destRoot = Path.GetFullPath(destDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                       + Path.DirectorySeparatorChar;
+        var full = Path.GetFullPath(Path.Combine(destDir, rel));
+        if (!full.StartsWith(destRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidFormatException($"压缩包含非法路径: {entryName}");
+        return full;
     }
 }
 

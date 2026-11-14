@@ -66,7 +66,7 @@ public sealed partial class CompressWindow : Window
     }
 
     private bool _diagDone;
-    private void OnFirstActivated(object? sender, WindowActivatedEventArgs e)
+    private void OnFirstActivated(object sender, WindowActivatedEventArgs e)
     {
         if (_diagDone) return;
         _diagDone = true;
@@ -171,6 +171,8 @@ public sealed partial class CompressWindow : Window
     }
 
     // ---- 多选合并: 写标记 → 抢收集权 → 等同批进程写齐 → 汇总 ----
+    // (2026-11-14 审查黄3) 批次隔离: 收集只认本批窗口内 (本批起步后落盘) 的标记, 清理只删本批窗口内的标记;
+    // 相邻批 (晚于本批起步) 刚写入、尚未收集的标记不再被本批误删或误并, 由它自己的收集窗收走; 1 小时兜底清理保留。
     private static List<string> CollectMultiSelect(string path)
     {
         try
@@ -182,6 +184,7 @@ public sealed partial class CompressWindow : Window
                 if (DateTime.Now - File.GetLastWriteTime(f) > TimeSpan.FromHours(1))
                 { try { File.Delete(f); } catch { } }
 
+            var started = DateTime.Now; // 本批窗口起点: 比它晚落的标记都是相邻批的, 不收不删
             var marker = Path.Combine(dir, Guid.NewGuid().ToString("N") + ".txt");
             File.WriteAllText(marker, path);
             using var mux = new Mutex(initiallyOwned: false, "Local\\TaoZip.Compress.Collect");
@@ -192,12 +195,14 @@ public sealed partial class CompressWindow : Window
                 catch (AbandonedMutexException) { got = true; } // 上个持有者异常退出, 标记按现状接管
                 if (!got) return new List<string> { path }; // 等不到收集权: 按单文件处理, 不让用户干等
                 Thread.Sleep(900); // 等资源管理器同批启动的进程把选中项写齐
-                var list = Directory.GetFiles(dir, "*.txt")
+                bool InBatch(string f) => File.GetLastWriteTime(f) >= started.AddMilliseconds(-50); // 50ms 容差纳秒级时钟抖动
+                var files = Directory.GetFiles(dir, "*.txt").Where(InBatch).ToList();
+                var list = files
                     .Select(ReadMarker)
                     .Where(p => !string.IsNullOrWhiteSpace(p) && (File.Exists(p) || Directory.Exists(p)))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
-                foreach (var f in Directory.GetFiles(dir, "*.txt")) { try { File.Delete(f); } catch { } }
+                foreach (var f in files) { try { File.Delete(f); } catch { } } // 只删本批收集到的标记, 不动相邻批
                 return list.Count > 0 ? list : new List<string> { path };
             }
             finally { if (got) mux.ReleaseMutex(); }
@@ -250,7 +255,7 @@ public sealed partial class CompressWindow : Window
     }
 
     // ---- 浏览: 选压缩包保存位置与名称 (v86: 失败不再无声, 提示可直接手输路径) ----
-    private async void OnBrowse(object? sender, RoutedEventArgs e)
+    private async void OnBrowse(object sender, RoutedEventArgs e)
     {
         Windows.Storage.Pickers.FileSavePicker picker;
         try
@@ -279,7 +284,7 @@ public sealed partial class CompressWindow : Window
     }
 
     // ---- 开始压缩 ----
-    private async void OnStart(object? sender, RoutedEventArgs e)
+    private async void OnStart(object sender, RoutedEventArgs e)
     {
         if (_started) return;
         var dest = TxtDest.Text.Trim().Trim('"');
@@ -409,7 +414,7 @@ public sealed partial class CompressWindow : Window
     }
 
     // ---- 转后台: 隐藏窗口, 托盘接管 ----
-    private void OnBackground(object? sender, RoutedEventArgs e)
+    private void OnBackground(object sender, RoutedEventArgs e)
     {
         if (_inTray || !_started || _done) return; // 未开始/已结束不进托盘
         if (_tray is null) _tray = new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this), "TaoZip 后台压缩中 — 点击查看进度", ShowFromTray);

@@ -45,11 +45,21 @@ public sealed partial class ExtractWindow : Window
         Closed += (_, _) => { _etaTimer.Stop(); _tray?.Dispose(); };
         // v68 自检: 首次激活即清点可视树, 空白窗真相落盘 theme.log
         Activated += OnFirstActivated;
-        Start(archive);
+        _ = StartSafe(archive); // (2026-11-14 审查黄1) fire-and-forget 安全包装: 异常落盘收口, 不再穿 async void 杀进程
+    }
+
+    private async Task StartSafe(string archive)
+    {
+        try { await Start(archive); }
+        catch (Exception ex)
+        {
+            ThemeService.LogEvent($"解压窗启动异常: {ex.GetType().Name} {ex.Message}\r\n栈首: {App.TrimStack(ex.StackTrace)}");
+            try { TxtPercent.Text = $"解压失败: {ex.Message}"; } catch { /* 界面未就绪时静默, 已落盘 */ }
+        }
     }
 
     private bool _diagDone;
-    private void OnFirstActivated(object? sender, WindowActivatedEventArgs e)
+    private void OnFirstActivated(object sender, WindowActivatedEventArgs e)
     {
         if (_diagDone) return;
         _diagDone = true;
@@ -139,7 +149,7 @@ public sealed partial class ExtractWindow : Window
         TxtPercent = pct;
     }
 
-    private async void Start(string archive)
+    private async Task Start(string archive)
     {
         try
         {
@@ -153,8 +163,10 @@ public sealed partial class ExtractWindow : Window
         }
         catch (Exception ex)
         {
+            // (2026-11-14 审查黄1) 去 rethrow: 就地落盘并给界面提示, 不再把异常改道送进 UnhandledException
             ThemeService.LogEvent($"解压窗 Start 前段异常: {ex.GetType().Name} {ex.Message}");
-            throw;
+            TxtPercent.Text = $"解压失败: {ex.Message}";
+            return;
         }
         var dest = ArchiveService.DefaultDestFor(archive);
         var began = DateTime.Now;
@@ -261,7 +273,7 @@ public sealed partial class ExtractWindow : Window
     }
 
     /// <summary>转入后台: 隐藏窗口, 托盘图标接管, 点图标唤起查看进度。</summary>
-    private void BtnBackground_Click(object? sender, RoutedEventArgs e)
+    private void BtnBackground_Click(object sender, RoutedEventArgs e)
     {
         if (_inTray) return; // 防连点重复触发托盘气泡
         if (_tray is null) _tray = new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this), "TaoZip 后台解压中 — 点击查看进度", ShowFromTray);

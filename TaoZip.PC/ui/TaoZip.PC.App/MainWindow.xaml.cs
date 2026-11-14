@@ -55,7 +55,7 @@ public sealed partial class MainWindow : Window
     }
 
     private bool _diagDone;
-    private void OnFirstActivated(object? sender, WindowActivatedEventArgs e)
+    private void OnFirstActivated(object sender, WindowActivatedEventArgs e)
     {
         if (_diagDone) return;
         _diagDone = true;
@@ -223,7 +223,7 @@ public sealed partial class MainWindow : Window
         var n = 2;
         while (Directory.Exists(extractDest)) extractDest = Path.Combine(folder.Path, $"{Path.GetFileNameWithoutExtension(extractSrc)}({n++})");
         Status($"解压到 {extractDest} …");
-        RunJob("解压", p => { var r = _svc.Extract(extractSrc, extractDest, p); return $"解压完成: {r.Files} 个文件 → {extractDest}"; }, extractDest);
+        await RunJob("解压", p => { var r = _svc.Extract(extractSrc, extractDest, p); return $"解压完成: {r.Files} 个文件 → {extractDest}"; }, extractDest);
     }
 
     private void OnSmartExtract(object sender, RoutedEventArgs e)
@@ -232,7 +232,7 @@ public sealed partial class MainWindow : Window
         string smartSrc = _currentArchive;
         string smartDest = ArchiveService.DefaultDestFor(smartSrc);
         Status($"智能解压到 {smartDest} …");
-        RunJob("智能解压", p => { var r = _svc.SmartExtract(smartSrc, smartDest, p); return $"智能解压完成: {r.Files} 个文件 → {smartDest}"; }, smartDest);
+        await RunJob("智能解压", p => { var r = _svc.SmartExtract(smartSrc, smartDest, p); return $"智能解压完成: {r.Files} 个文件 → {smartDest}"; }, smartDest);
     }
 
     // ---- 完整性测试 ----
@@ -345,7 +345,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>删除单条记录; 可勾选连同删除本地压缩包文件。</summary>
-    private async void OnHistDeleteRow(object? sender, RoutedEventArgs e)
+    private async void OnHistDeleteRow(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement fe || fe.Tag is not int idx) return;
         if (idx < 0 || idx >= _historyView.Count) return;
@@ -477,14 +477,15 @@ public sealed partial class MainWindow : Window
         RebuildHistory();
 
         if (alsoFiles.IsChecked == true)
-            ShowPurgeReport(total, results);
+            _ = ShowPurgeReport(total, results); // fire-and-forget (2026-11-14 审查黄2): 方法内已收口, 不再走 async void
         else
             Status($"已删除 {total} 条记录 (本地文件未动)。");
     }
 
     /// <summary>删除完成统计: 共选多少、删了多少、未删的各是什么原因;
-    /// 点「关闭」立即关, 3 秒无操作自动关 (v88)。</summary>
-    private async void ShowPurgeReport(int totalRecords, List<(string Path, bool Deleted, string Reason)> results)
+    /// 点「关闭」立即关, 3 秒无操作自动关 (v88)。
+    /// (2026-11-14 审查黄2) 非 async void: ShowAsync 异常就地落盘, 不穿出到 UnhandledException。</summary>
+    private async Task ShowPurgeReport(int totalRecords, List<(string Path, bool Deleted, string Reason)> results)
     {
         var deleted = results.Count(r => r.Deleted);
         var failed = results.Where(r => !r.Deleted).ToList();
@@ -518,7 +519,8 @@ public sealed partial class MainWindow : Window
             XamlRoot = (Content as FrameworkElement)?.XamlRoot!
         };
         _ = AutoCloseDialog(dialog);
-        await dialog.ShowAsync();
+        try { await dialog.ShowAsync(); }
+        catch (Exception ex) { ThemeService.LogEvent($"删除完成弹窗异常: {ex.GetType().Name} {ex.Message}\r\n栈首: {App.TrimStack(ex.StackTrace)}"); }
         Status($"已删除 {totalRecords} 条记录; 本地文件删除 {deleted} 个"
                + (failed.Count > 0 ? $", 未删除 {failed.Count} 个" : "") + "。");
     }
@@ -627,14 +629,22 @@ public sealed partial class MainWindow : Window
         if (file == null) return;
         var dropDest = file.Path;
         var dropItems = items.Select(i => i.Path).ToList();
-        RunJob("压缩", p => { _svc.CreateZip(dropItems, dropDest, p); return $"压缩完成 → {dropDest}"; }, archiveOverride: dropDest); // v89: 历史记产物 zip, 可定位可删
+        // 线程源头闸 (2026-11-14 审查红2): 目标与拖入内容重合时, File.Create 会先把源截断为零——在进任务前就拒绝, 与右键压缩小窗同口径
+        var dropDestFull = Path.GetFullPath(dropDest);
+        if (dropItems.Any(p => string.Equals(Path.GetFullPath(p), dropDestFull, StringComparison.OrdinalIgnoreCase)))
+        {
+            Status("压缩包不能就是拖入的文件本身, 请换个位置或名称。");
+            return;
+        }
+        await RunJob("压缩", p => { _svc.CreateZip(dropItems, dropDest, p); return $"压缩完成 → {dropDest}"; }, archiveOverride: dropDest); // v89: 历史记产物 zip, 可定位可删
     }
 
     // ---- 通用任务执行 + 历史记录 ----
-    private void RunJob(string action, Func<string> job, string? dest = null)
+    private Task RunJob(string action, Func<string> job, string? dest = null)
         => RunJob(action, _ => job(), dest);
 
-    private async void RunJob(string action, Func<IProgress<double>, string> job, string? dest = null, string? archiveOverride = null)
+    // 非事件处理器 (2026-11-14 审查黄2): async Task 走 await 链, 异常经调用方收口, 不再走 async void 骨架
+    private async Task RunJob(string action, Func<IProgress<double>, string> job, string? dest = null, string? archiveOverride = null)
     {
         string archive = archiveOverride ?? _currentArchive ?? ""; // v89: 压缩类条目可显式指定产物路径, 落在 ArchivePath 位
         Status($"{action}中…");

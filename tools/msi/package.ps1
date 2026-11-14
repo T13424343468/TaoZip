@@ -59,7 +59,7 @@ Write-Host "安装内容编目完成: $($script:coreRefs.Count) 个文件组件"
 # 默认取主工程 FileVersion，保持安装包与应用版本一致；环境变量仍可覆盖
 $csprojFile = Join-Path (Split-Path (Split-Path $PSScriptRoot)) 'TaoZip.PC\ui\TaoZip.PC.App\TaoZip.PC.App.csproj'
 $csprojRaw = Get-Content $csprojFile -Raw
-$csprojVer = if ($csprojRaw -match '<FileVersion>([^<]+)</FileVersion>') { $Matches[1] } elseif ($csprojRaw -match '<Version>([^<]+)</Version>') { $Matches[1] } else { '1.0.4.0' }
+$csprojVer = if ($csprojRaw -match '<FileVersion>([^<]+)</FileVersion>') { $Matches[1] } elseif ($csprojRaw -match '<Version>([^<]+)</Version>') { $Matches[1] } else { '1.0.5.0' }
 if ($csprojVer -match '^\d+\.\d+\.\d+$') { $csprojVer = "$csprojVer.0" }
 Write-Host "主工程版本: $csprojVer"
 $PkgVersion = if ($env:TAOZIP_PKG_VERSION) { $env:TAOZIP_PKG_VERSION } else { $csprojVer }

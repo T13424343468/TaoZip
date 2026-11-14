@@ -15,13 +15,13 @@
     <WindowsPackageType>None</WindowsPackageType>
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <AssemblyName>TaoZip</AssemblyName>
-    <Version>1.0.4</Version>
+    <Version>1.0.5</Version>
     <!-- 定板 1.00: 发布信息一律 Tao -->
     <Product>TaoZip</Product>
     <Company>Tao</Company>
     <Authors>Tao</Authors>
     <Copyright>Copyright (c) 2026 Tao</Copyright>
-    <InformationalVersion>1.0.4</InformationalVersion>
+    <InformationalVersion>1.0.5</InformationalVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>

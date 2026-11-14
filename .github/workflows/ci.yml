@@ -173,7 +173,7 @@ jobs:
           $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\cover.log" -Wait -PassThru
           if ($p.ExitCode -notin 0,3010) { Get-Content out\cover.log -Tail 60; throw "覆盖安装失败 exit=$($p.ExitCode)" }
           "cover-install: ok" | Out-File evidence\msi-facts.txt -Append
-      - name: 升级安装（1.0.4 → 1.0.5 走 MajorUpgrade）
+      - name: 升级安装（1.0.5 同版本覆盖走 MajorUpgrade）
         shell: pwsh
         run: |
           $env:TAOZIP_PKG_VERSION = '1.0.5'
@@ -224,3 +224,4 @@ jobs:
           path: |
             evidence
             out/*.log
+            out/*.msi

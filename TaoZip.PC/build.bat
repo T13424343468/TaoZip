@@ -49,7 +49,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "tools\msi\package.ps1" -Pub
 
 REM 全部成功才替换: 此时 out.new 里只有 TaoZip-1.0.4-x64.msi
 
-if not exist "out.new\TaoZip-1.0.4-x64.msi" (
+if not exist "out.new\TaoZip-1.0.5-x64.msi" (
 
   echo 安装器整理异常, 请把此提示发给开发助手
 

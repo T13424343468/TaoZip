@@ -74,7 +74,7 @@ foreach ($f in $allFiles) {
 
 $wxs = @"
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package Codepage="936" Name="TaoZip" Manufacturer="Tao" Version="1.0.4.0"
+  <Package Codepage="936" Name="TaoZip" Manufacturer="Tao" Version="1.0.5.0"
            UpgradeCode="B7A3C9D2-4E5F-4A6B-8C1D-2F3E4A5B6C7D" Scope="perMachine" Compressed="yes">
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="已安装了更新版本的 TaoZip，如需重装请先在“应用”中卸载。" AllowSameVersionUpgrades="yes" />
     <!-- 默认装 D 盘 (D:\Program Files\TaoZip, 界面可改): 与 TaoPad 相同的"目录同名属性覆盖"写法,
@@ -332,7 +332,7 @@ $wxsPath = Join-Path $env:TEMP "TaoZip.Package.wxs"
 $wixExe = Join-Path $PSScriptRoot "wix\wix.exe"
 if (-not (Test-Path $wixExe)) { throw "包内打包工具缺失 ($wixExe)，请使用完整包重解压" }
 
-$msi = Join-Path $OutDir "TaoZip-1.0.4-x64.msi"
+$msi = Join-Path $OutDir "TaoZip-1.0.5-x64.msi"
 if (Test-Path $msi) { Remove-Item $msi -Force }
 Write-Host ("打包工具: " + (Get-Item $wixExe).Length + " bytes @ " + (Get-Item $wixExe).LastWriteTime)
 & $wixExe build $wxsPath -pdbtype none -o $msi 2>&1 | Tee-Object -FilePath (Join-Path $OutDir "msi-build.log")

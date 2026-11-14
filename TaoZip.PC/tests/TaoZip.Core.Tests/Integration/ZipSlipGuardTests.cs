@@ -97,4 +97,24 @@ public class ZipSlipGuardTests : IDisposable
         Assert.True(File.Exists(dest));
         Assert.Contains(".zip", Directory.GetFiles(_dir).Select(Path.GetExtension));
     }
+
+    [Fact]
+    public void CreateTarGz_目标在待压缩清单中_拒绝并不动源()
+    {
+        var src = Path.Combine(_dir, "victim.txt");
+        File.WriteAllText(src, "valuable data");
+        Assert.Throws<InvalidOperationException>(() => _svc.CreateTarGz(new[] { src }, src));
+        Assert.Equal("valuable data", File.ReadAllText(src)); // 源文件一个字节都不能少
+    }
+
+    [Fact]
+    public void CreateTarGz_正常压缩_不受自咬闸影响()
+    {
+        var dest = Path.Combine(_dir, "good.tar.gz");
+        _svc.CreateTarGz(new[] { Path.Combine(_dir, "a.txt") }, dest);
+        var outDir = Path.Combine(_dir, "out-tar");
+        var r = _svc.Extract(dest, outDir);
+        Assert.Equal(1, r.Files);
+        Assert.Equal("hello", File.ReadAllText(Path.Combine(outDir, "a.txt")));
+    }
 }

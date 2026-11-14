@@ -47,6 +47,10 @@ public class ArchiveService
     public void CreateTarGz(IEnumerable<string> paths, string destTarGz, IProgress<double>? progress = null)
     {
         var items = paths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+        // 自咬闸 (2026-11-14 全量审查红2): 目标 tar.gz 出现在待压缩清单里时, File.Create 先截断目标再把自己读进自己——同拖放毁源族, 照 CreateZip 兜底闸拒收
+        var destTarFull = Path.GetFullPath(destTarGz);
+        if (items.Any(p => string.Equals(Path.GetFullPath(p), destTarFull, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("压缩包不能就是所选文件本身, 请换个位置或名称。");
         long totalBytes = items.Sum(SizeOf);
         long doneBytes = 0;
         using var fs = File.Create(destTarGz);

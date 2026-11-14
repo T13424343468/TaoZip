@@ -89,7 +89,7 @@ $wxs = @"
       <TextStyle Id="DlgFont" FaceName="微软雅黑" Size="9" />
       <TextStyle Id="TitleFont" FaceName="微软雅黑" Size="13" Bold="yes" />
       <Property Id="DefaultUIFont" Value="DlgFont" />
-      <Dialog Id="MainDlg" Width="440" Height="270" Title="[ProductName] 安装程序">
+      <Dialog Id="MainDlg" Width="440" Height="340" Title="[ProductName] 安装程序">
         <Control Id="Title" Type="Text" X="20" Y="12" Width="400" Height="22" Text="{\TitleFont}安装 TaoZip" />
         <Control Id="LicenseText" Type="Text" X="20" Y="42" Width="400" Height="92" Text="TaoZip 1.0，免费使用、无广告、无捆绑。本软件按“现状”提供：请仅将它用于合法合规的文件压缩与解压用途，作者不对使用本软件产生的任何损失承担责任。" />
         <Control Id="AcceptCheck" Type="CheckBox" X="20" Y="140" Width="400" Height="16" Property="LICENSE_ACCEPTED" CheckBoxValue="1" Text="我已阅读并同意以上说明" />
@@ -100,11 +100,23 @@ $wxs = @"
           <Publish Event="Remove" Value="DeskShortcutF" Condition="NOT DESKTOP_SHORTCUT" />
           <Publish Event="AddLocal" Value="DeskShortcutF" Condition="DESKTOP_SHORTCUT" />
         </Control>
-        <Control Id="InstallNow" Type="PushButton" X="340" Y="240" Width="80" Height="24" Default="yes" Text="立即安装">
+        <Control Id="CtxCheck" Type="CheckBox" X="20" Y="238" Width="310" Height="16" Property="CTX_MENU" CheckBoxValue="1" Text="添加右键“解压到此处”菜单（压缩包文件）">
+          <Publish Event="Remove" Value="CtxMenuF" Condition="NOT CTX_MENU" />
+          <Publish Event="AddLocal" Value="CtxMenuF" Condition="CTX_MENU" />
+        </Control>
+        <Control Id="CtxCompressCheck" Type="CheckBox" X="20" Y="258" Width="310" Height="16" Property="CTX_COMPRESS" CheckBoxValue="1" Text="添加右键“使用TaoZip压缩”菜单（任意文件/文件夹，支持多选）">
+          <Publish Event="Remove" Value="CtxCompressF" Condition="NOT CTX_COMPRESS" />
+          <Publish Event="AddLocal" Value="CtxCompressF" Condition="CTX_COMPRESS" />
+        </Control>
+        <Control Id="AssocCheck" Type="CheckBox" X="20" Y="278" Width="310" Height="16" Property="ASSOC_ALL" CheckBoxValue="1" Text="关联常见压缩格式（zip / 7z / rar / tar 等）">
+          <Publish Event="Remove" Value="AssocFile" Condition="NOT ASSOC_ALL" />
+          <Publish Event="AddLocal" Value="AssocFile" Condition="ASSOC_ALL" />
+        </Control>
+        <Control Id="InstallNow" Type="PushButton" X="340" Y="282" Width="80" Height="24" Default="yes" Text="立即安装">
           <Publish Event="SpawnDialog" Value="AcceptWarnDlg" Condition="NOT LICENSE_ACCEPTED" Order="1" />
           <Publish Event="NewDialog" Value="VerifyReadyDlg" Condition="LICENSE_ACCEPTED" Order="2" />
         </Control>
-        <Control Id="CancelBtn" Type="PushButton" X="340" Y="268" Width="80" Height="18" Cancel="yes" Text="取消">
+        <Control Id="CancelBtn" Type="PushButton" X="340" Y="310" Width="80" Height="18" Cancel="yes" Text="取消">
           <Publish Event="EndDialog" Value="Exit" />
         </Control>
       </Dialog>
@@ -190,6 +202,97 @@ $wxs = @"
     <Feature Id="DeskShortcutF" Title="创建桌面快捷方式" Level="1">
       <ComponentRef Id="DeskShortcutC" />
     </Feature>
+    <Feature Id="AssocFile" Title="关联常见压缩格式" Level="1">
+      <Component Directory="INSTALLFOLDER" Guid="8F4E9B21-3C57-4D8A-9E12-6A7B8C9D0E1F">
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\TaoZip.Archive" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\TaoZip.Archive">
+          <RegistryValue Type="string" Value="TaoZip 压缩包文档" KeyPath="yes" />
+          <RegistryKey Key="DefaultIcon"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" /></RegistryKey>
+          <RegistryKey Key="shell\open\command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.zip"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.7z"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.rar"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.tar"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.gz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.tgz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.bz2"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.xz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+      </Component>
+    </Feature>
+    <Feature Id="CtxMenuF" Title="右键菜单：解压到此处" Level="1">
+      <Component Directory="INSTALLFOLDER" Guid="9A5F0C32-4D68-4E9B-AF23-7B8C9D0E1F2A">
+        <RegistryValue Root="HKLM" Key="Software\Tao\TaoZip" Name="ContextMenu" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.7z\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.7z\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.rar\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.rar\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.tar\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.tar\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.gz\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.gz\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.tgz\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.tgz\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.bz2\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.bz2\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.xz\shell\TaoZip.Extract" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\.xz\shell\TaoZip.Extract">
+          <RegistryValue Type="string" Value="使用TaoZip解压到此处" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /extract-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+      </Component>
+    </Feature>
+    <Feature Id="CtxCompressF" Title="右键菜单：压缩任意文件" Level="1">
+      <Component Directory="INSTALLFOLDER" Guid="A16B1D43-5E79-4FAC-BF34-8C9D0E1F2A3B">
+        <RegistryValue Root="HKLM" Key="Software\Tao\TaoZip" Name="CtxCompress" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\*\shell\TaoZip.Compress" Action="removeOnUninstall" />
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\*\shell\TaoZip.Compress" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\*\shell\TaoZip.Compress">
+          <RegistryValue Type="string" Value="使用TaoZip压缩" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /compress-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\Directory\shell\TaoZip.Compress" Action="removeOnUninstall" />
+        <RemoveRegistryKey Root="HKLM" Key="Software\Classes\SystemFileAssociations\Directory\shell\TaoZip.Compress" Action="removeOnUninstall" />
+        <RegistryKey Root="HKLM" Key="Software\Classes\Directory\shell\TaoZip.Compress">
+          <RegistryValue Type="string" Value="使用TaoZip压缩" />
+          <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; /compress-here &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+      </Component>
+    </Feature>
+
   </Package>
 </Wix>
 "@

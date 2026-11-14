@@ -1,4 +1,4 @@
-name: taozip-ci
+﻿name: taozip-ci
 
 on:
   push:
@@ -170,6 +170,10 @@ jobs:
           $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /l*v out\install.log" -Wait -PassThru
           if ($p.ExitCode -notin 0,3010) { Get-Content out\install.log -Tail 60; throw "首装失败 exit=$($p.ExitCode)" }
           if (-not (Test-Path 'D:\Program Files\TaoZip\TaoZip.exe')) { throw "首装后安装目录没有 TaoZip.exe" }
+          $ctx = Get-Item 'HKLM:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -ErrorAction SilentlyContinue
+          if (-not $ctx) { throw "首装后右键解压登记缺失（.zip shell TaoZip.Extract）" }
+          $ctx2 = Get-Item 'HKLM:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -ErrorAction SilentlyContinue
+          if (-not $ctx2) { throw "首装后右键压缩登记缺失（* shell TaoZip.Compress）" }
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "首装后没有卸载登记" }

@@ -63,11 +63,28 @@ $csprojVer = if ($csprojRaw -match '<FileVersion>([^<]+)</FileVersion>') { $Matc
 if ($csprojVer -match '^\d+\.\d+\.\d+$') { $csprojVer = "$csprojVer.0" }
 Write-Host "主工程版本: $csprojVer"
 $PkgVersion = if ($env:TAOZIP_PKG_VERSION) { $env:TAOZIP_PKG_VERSION } else { $csprojVer }
+# ---- 用户级旧右键键清理: 应用运行时写 HKCU 同名键, 卸载/升级清不到会残留并遮蔽系统级新键 ----
+# 装时清 (removeOnInstall) + 卸载时清 (removeOnUninstall); 同一键的装/卸两条登记必须各立其名 (真机 WIX0091 教训)
+$hkcuStaleKeys = @(
+    (0..7 | ForEach-Object { "Software\Classes\SystemFileAssociations\$(@('.zip','.7z','.rar','.tar','.gz','.tgz','.bz2','.xz')[$_])\shell\TaoZip.Extract" })
+    "Software\Classes\*\shell\TaoZip.Compress"
+    "Software\Classes\Directory\shell\TaoZip.Compress"
+    "Software\Classes\TaoZip.Archive"
+    "Software\TaoZip\FileAssocBackup"
+)
+$hkcuCleanup = ""
+$hkcuIdx = 0
+foreach ($k in $hkcuStaleKeys) {
+    $hkcuIdx++
+    $hkcuCleanup += "<RemoveRegistryKey Id=`"HkcuCleanInstall$hkcuIdx`" Root=`"HKCU`" Key=`"$k`" Action=`"removeOnInstall`" />"
+    $hkcuCleanup += "<RemoveRegistryKey Id=`"HkcuCleanUninstall$hkcuIdx`" Root=`"HKCU`" Key=`"$k`" Action=`"removeOnUninstall`" />"
+}
+
 $wxs = @"
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Package Codepage="936" Name="TaoZip" Manufacturer="Tao" Version="$PkgVersion"
            UpgradeCode="7C3F2A9E-5D41-4B8F-9E6A-2C8B1D4F0A73" Scope="perMachine" Compressed="yes">
-    <MajorUpgrade DowngradeErrorMessage="已安装了更新版本的 TaoZip，如需重装请先在“应用”中卸载。" AllowSameVersionUpgrades="yes" />
+    <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="已安装了更新版本的 TaoZip，如需重装请先在“应用”中卸载。" AllowSameVersionUpgrades="yes" />
     <MediaTemplate EmbedCab="yes" />
     <CustomAction Id="SetDefaultInstallDir" Property="INSTALLFOLDER" Value="D:\Program Files\TaoZip\" Execute="immediate" Return="check" />
     <!-- 装/卸/升级前结束运行中的程序（进程残留专项，TaoDown/TaoPad 同款写法，真机验证过）:
@@ -198,6 +215,11 @@ $wxs = @"
     </StandardDirectory>
     <Feature Id="Core" Title="TaoZip 主程序" Description="压缩解压本体（必装）" Level="1" AllowAbsent="no">$coreRefsXml
       <ComponentRef Id="MenuShortcutC" />
+      <Component Directory="INSTALLFOLDER" Guid="C4D8E9F5-7A9B-4C1D-8E3F-2B4C5D6E7F80">
+        <!-- 用户级旧右键键清理: 装时清残留 (新键不被旧键遮蔽), 卸载时清应用运行时写的键 (卸载即干净) -->
+        <RegistryValue Root="HKCU" Key="Software\Tao\TaoZip" Name="HkcuAssocCleanup" Type="integer" Value="1" KeyPath="yes" />
+        $hkcuCleanup
+      </Component>
     </Feature>
     <Feature Id="DeskShortcutF" Title="创建桌面快捷方式" Level="1">
       <ComponentRef Id="DeskShortcutC" />

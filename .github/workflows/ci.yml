@@ -73,6 +73,14 @@ jobs:
           dotnet publish ZipGo/ui/TaoZip.UI.Android/TaoZip.UI.Android.csproj -c Release -p:RuntimeIdentifier=android-x64
           echo "---- publish 产物 ----"
           find ZipGo/ui -name "*.apk" -not -path "*/obj/*" || true
+          mkdir -p out/android
+          find ZipGo/ui -name "*.apk" -not -path "*/obj/*" -exec cp {} out/android/ \;
+      - name: 存档安卓安装包
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taozip-android-apk
+          path: out/android/*.apk
       - name: 云端真机装机 + 真人触控实测
         uses: reactivecircus/android-emulator-runner@v2
         with:

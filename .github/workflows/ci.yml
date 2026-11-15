@@ -293,3 +293,45 @@ jobs:
             evidence
             out/*.log
             out/*.msi
+
+  pc-msi-delivery:
+    name: PC 安装包直出（MSI 快速交付）
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: 安装 WiX 打包工具
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 4.0.5
+          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.dotnet\tools"
+      - name: 云端出包（PC 界面工程, 自包含）
+        run: >
+          dotnet publish TaoZip.PC/ui/TaoZip.PC.App/TaoZip.PC.App.csproj -c Release -r win-x64
+          --self-contained true -p:WindowsAppSDKSelfContained=true -p:Platform=x64
+      - name: 定位发布目录
+        shell: pwsh
+        run: |
+          $pub = Get-ChildItem -Directory -Recurse -Path TaoZip.PC/ui/TaoZip.PC.App/bin |
+                 Where-Object { Test-Path (Join-Path $_.FullName 'TaoZip.exe') } |
+                 Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $pub) { throw "没找到含 TaoZip.exe 的发布目录" }
+          "PUBDIR=$($pub.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: MSI 打包（微信风格自绘向导）
+        shell: pwsh
+        run: ./tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out
+      - name: 直出核验（体积/唯一性）
+        shell: pwsh
+        run: |
+          $msis = Get-Item out\*.msi
+          if ($msis.Count -ne 1) { throw "out 下 msi 数量异常: $($msis.Count)" }
+          if ($msis[0].Length -lt 1MB) { throw "MSI 体积异常偏小: $($msis[0].Name)" }
+          "delivery: $($msis[0].Name) $([math]::Round($msis[0].Length/1MB,1)) MB"
+      - name: 直出 MSI 上传
+        uses: actions/upload-artifact@v4
+        with:
+          name: taozip-msi-delivery
+          path: out/*.msi

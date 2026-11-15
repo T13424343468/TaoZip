@@ -37,11 +37,9 @@
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="TaoZipCommands.cpp" />
-    <ClCompile Include="$(IntDir)TaoZipShellext_i.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TaoZipCommands.h" />
-    <Midl Include="TaoZipShellext.idl" />
     <None Include="resource.h" />
     <None Include="TaoZipShellext.def" />
     <None Include="TaoZipShellext.rc" />

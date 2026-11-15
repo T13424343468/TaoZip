@@ -1,0 +1,6 @@
+; TaoZipShellext.def - exports (zero Chinese in identifiers).
+LIBRARY TaoZipShellext
+EXPORTS
+    DllGetCommandFactory   PRIVATE
+    DllRegisterServer      PRIVATE
+    DllUnregisterServer    PRIVATE

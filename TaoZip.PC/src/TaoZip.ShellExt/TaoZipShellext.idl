@@ -1,0 +1,14 @@
+// TaoZipShellext.idl - IExplorerCommand COM interfaces for TaoZip dynamic buttons.
+import "ocidl.idl";
+import "shobjidl.idl";
+
+[uuid(9B0F6C21-3A47-4E8B-9D2A-1C5E7F8A9B3C)]
+library TaoZipShellextLib
+{
+    // Manifest TIP: These GUIDs must match those used in package registration.
+    [uuid(C1D2E3F4-5A6B-7C8D-9E0F-1A2B3C4D5E6F)]
+    coclass TaoZipExtractCommand { }
+
+    [uuid(D2E3F4A5-6B7C-8D9E-0F1A-2B3C4D5E6F7A)]
+    coclass TaoZipCompressCommand { }
+}

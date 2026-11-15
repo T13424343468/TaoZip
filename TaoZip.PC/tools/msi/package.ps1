@@ -14,6 +14,19 @@ if (-not (Test-Path (Join-Path $publishRoot 'TaoZip.exe'))) {
     throw "发布目录里没找到 TaoZip.exe: $PublishDir"
 }
 
+# 资源管理器动态按钮 (2026-11-15 老板令): 原生 shell 扩展 DLL 随包携带。
+# 查找顺序: publish 根 → 沙箱/CI 常见 ShellExt 编译产物位置; 找不到就显式失败 (不静默出空壳包)。
+$shellextCandidates = @(
+    (Join-Path $publishRoot 'TaoZipShellext.dll'),
+    (Join-Path $PSScriptRoot '..\..\src\TaoZip.ShellExt\bin\Release\x64\ShellExt\TaoZipShellext.dll'),
+    (Join-Path $PSScriptRoot '..\..\src\TaoZip.ShellExt\bin\x64\Release\TaoZipShellext.dll')
+)
+$shellext = $shellextCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $shellext) {
+    throw "发布目录与常见编译路径均未找到 TaoZipShellext.dll (请先编译 native/TaoZip.ShellExt)"
+}
+Copy-Item $shellext (Join-Path $publishRoot 'TaoZipShellext.dll') -Force
+
 # ---- 枚举发布文件: 目录树(支持多级) + 组件清单 ----
 $allFiles = Get-ChildItem -Path $publishRoot -Recurse -File
 $script:dirId = 0
@@ -74,7 +87,7 @@ foreach ($f in $allFiles) {
 
 $wxs = @"
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package Codepage="936" Name="TaoZip" Manufacturer="Tao" Version="1.0.6.0"
+  <Package Codepage="936" Name="TaoZip" Manufacturer="Tao" Version="1.0.7.0"
            UpgradeCode="B7A3C9D2-4E5F-4A6B-8C1D-2F3E4A5B6C7D" Scope="perMachine" Compressed="yes">
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="已安装了更新版本的 TaoZip，如需重装请先在“应用”中卸载。" AllowSameVersionUpgrades="yes" />
     <!-- 默认装 D 盘 (D:\Program Files\TaoZip, 界面可改): 与 TaoPad 相同的"目录同名属性覆盖"写法,
@@ -315,6 +328,18 @@ $wxs = @"
       </Component>
     </Feature>
 
+    <Feature Id="ShellExtF" Title="文件管理器动态按钮" Level="1">
+      <Component Directory="INSTALLFOLDER" Guid="B2C3D4E5-6F70-4A1B-8C9D-0E1F2A3B4C5D">
+        <File Id="TaoZipShellextDll" Source="TaoZipShellext.dll" Name="TaoZipShellext.dll" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\Tao\TaoZip" Name="ShellExtInstalled" Type="integer" Value="1" KeyPath="no" />
+        <!-- Win11 modern menu: DLL ships with the MSI, first-launch of TaoZip.exe
+             self-registers the sparse package (AddPackageByUri), keeps the installer
+             free of custom actions. Uninstall removes the registry marker; the App
+             own-cleanup handles sparse package removal (RemovePackageAsync). -->
+        <RemoveRegistryKey Root="HKLM" Key="Software\Tao\TaoZip\ShellExtSparse" Action="removeOnUninstall" />
+      </Component>
+    </Feature>
+
     <Feature Id="DeskShortcutF" Title="创建桌面快捷方式" Level="1">
       <Component Directory="DesktopFolder">
         <Shortcut Id="DesktopLnk" Name="TaoZip" Target="[INSTALLFOLDER]TaoZip.exe" Icon="TaoZipIco" WorkingDirectory="INSTALLFOLDER" />
@@ -332,7 +357,7 @@ $wxsPath = Join-Path $env:TEMP "TaoZip.Package.wxs"
 $wixExe = Join-Path $PSScriptRoot "wix\wix.exe"
 if (-not (Test-Path $wixExe)) { throw "包内打包工具缺失 ($wixExe)，请使用完整包重解压" }
 
-$msi = Join-Path $OutDir "TaoZip-1.0.6-x64.msi"
+$msi = Join-Path $OutDir "TaoZip-1.0.7-x64.msi"
 if (Test-Path $msi) { Remove-Item $msi -Force }
 Write-Host ("打包工具: " + (Get-Item $wixExe).Length + " bytes @ " + (Get-Item $wixExe).LastWriteTime)
 & $wixExe build $wxsPath -pdbtype none -o $msi 2>&1 | Tee-Object -FilePath (Join-Path $OutDir "msi-build.log")

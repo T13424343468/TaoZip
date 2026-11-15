@@ -60,6 +60,12 @@ public partial class App : Application
                 try { await Task.Delay(1000); Environment.Exit(0); } catch { }
             });
         };
+        // 资源管理器动态按钮 (2026-11-15 老板令): 原生 shell 扩展稀疏包首启自注册
+        // (后台静默, 失败不影响主功能; 进度窗角色不重复注册, 主窗兜底)。
+        if (!ReferenceEquals(Role, "解压窗") && !ReferenceEquals(Role, "压缩窗"))
+        {
+            ShellExtRegistration.RegisterIfReady();
+        }
         // 主题: 水墨默认自带, 按上次选择应用到当前窗口 (Tao 系列主题)
         ThemeService.Apply(_window, new ThemeStore(AppDir()).Load());
         _window.Activate();

@@ -36,6 +36,44 @@ jobs:
       - name: 编译 PC 全解决方案
         run: dotnet build TaoZip.PC/TaoZip.PC.sln -c Release
 
+  shell-ext-build:
+    name: Windows 真机层编译（资源管理器按钮原生 DLL）
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: 配置 C++ 工具集
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: 判定清单对齐校验（C++ vs C#，防双源漂移）
+        shell: pwsh
+        run: |
+          $cpp = Get-Content TaoZip.PC/src/TaoZip.ShellExt/TaoZipCommands.cpp -Raw -Encoding UTF8
+          # C# 侧清单为唯一事实源 (ArchiveKinds.OpenableExtensions), 逐项断言 C++ 侧含同名单
+          $csList = @('.zip','.7z','.rar','.tar','.gz','.bz2','.xz','.tgz','.tbz2','.txz')
+          foreach ($e in $csList) {
+            if ($cpp -notlike "*`"$e`"*") { throw "C++ 侧缺扩展名 $e，与 C# ArchiveKinds 漂移" }
+          }
+          foreach ($e in @('.tar.gz','.tar.bz2','.tar.xz')) {
+            if ($cpp -notlike "*`"$e`"*") { throw "C++ 侧缺复合扩展名 $e，与 C# ArchiveKinds 漂移" }
+          }
+          "extension-list-sync: ok ($($csList.Count) + 3 compound)" | Out-File -FilePath evidence_shell_ext_sync.txt -Append
+      - name: 编译原生 DLL（MSBuild C++，零警告=错）
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "未找到含 C++ 工具集的 Visual Studio" }
+          $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+          & $msbuild TaoZip.PC/src/TaoZip.ShellExt/TaoZipShellext.vcxproj -p:Configuration=Release -p:Platform=x64 -m -warnAsError
+          if ($LASTEXITCODE -ne 0) { throw "原生 DLL 编译失败" }
+      - name: 存档编译证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taozip-shellext-evidence
+          path: evidence_shell_ext_sync.txt
+
   android-build:
     name: Android 真机层编译（APK）
     runs-on: ubuntu-latest

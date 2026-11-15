@@ -16,7 +16,7 @@ namespace TaoZip
 {
     const wchar_t* const kExtractButtonText = L"TaoZip \x89E3\x538B";   // TaoZip 解压
     const wchar_t* const kCompressButtonText = L"TaoZip \x538B\x7F29"; // TaoZip 压缩
-    const wchar_t* const kIconReference = L" TaoZipShellext.dll,-1";    // first icon resource
+    const wchar_t* const kIconReference = L"TaoZipShellext.dll,-1";     // icon resource id 1
 
     // Same extension list as C# ArchiveKinds.OpenableExtensions (single-layer forms).
     // Case-insensitive comparisons; compounds handled by suffix check below.
@@ -54,10 +54,9 @@ namespace TaoZip
         const wchar_t* lastSep = (lastSlash && lastFwd) ? (lastSlash > lastFwd ? lastSlash : lastFwd)
                                                        : (lastSlash ? lastSlash : lastFwd);
         if (lastSep && *(lastSep + 1) == L'\0') return true;  // trailing separator: folder
+        // Extension dot must live after the last separator to count as a file extension.
         const wchar_t* lastDot = std::wcsrchr(lastSep ? lastSep : path, L'.');
-        return lastDot == nullptr || std::wcsrchr(lastSep ? lastSep : path, L'.') == nullptr
-                   ? true
-                   : (lastDot != nullptr && lastDot < lastSep);
+        return lastDot == nullptr;
     }
 
     int DecideButton(IShellItemArray* selection)
@@ -205,18 +204,6 @@ namespace TaoZip
         if (paths.empty()) return;
 
         // Build quoted command line: "exe" /switch "path1" "path2" ...
-        std::wstring args;
-        args.reserve(MAX_PATH * 2);
-        for (size_t i = 0; i < paths.size(); ++i)
-        {
-            if (i == 0) args += L"\" /"; // close exe quote, add switch
-            else args += L" ";
-            args += switchName;
-            args += L" \"";
-            args += paths[i];
-            args += L"\"";
-        }
-        // Rebuild cleanly: exe quoted + switch + each quoted path.
         std::wstring cmdline = std::wstring(L"\"") + exePath + L"\" " + switchName;
         for (const auto& p : paths)
         {

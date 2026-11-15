@@ -1,10 +1,5 @@
-// TaoZipShellext.rc - embed the TaoZip taiji icon (App icon reuse) and strings.
+// TaoZipShellext.rc - embed the TaoZip taiji icon (App icon reuse).
+// Menu text lives as C++ literals (GetTitle); no string table needed here.
 #include "resource.h"
 
 IDI_TAOZIP_ICON ICON "..\\..\\ui\\TaoZip.PC.App\\Resources\\app.ico"
-
-STRINGTABLE
-BEGIN
-    IDS_EXTRACT_TEXT  "TaoZip \x89E3\x538B"
-    IDS_COMPRESS_TEXT "TaoZip \x538B\x7F29"
-END

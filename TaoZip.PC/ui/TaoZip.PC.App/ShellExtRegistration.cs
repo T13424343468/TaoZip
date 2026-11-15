@@ -1,8 +1,7 @@
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Windows.ApplicationModel;
+using TaoZip.Core;
 using Windows.Management.Deployment;
 
 namespace TaoZip.PC.App;
@@ -10,7 +9,7 @@ namespace TaoZip.PC.App;
 /// <summary>
 /// 资源管理器动态按钮 (2026-11-15 老板令): 原生 shell 扩展 TaoZipShellext.dll 的
 /// 稀疏包注册与清理。注册在应用首启后台静默完成 (失败不影响主功能); 卸载由
-/// 主窗退出走 SparseCleanUp, 保持「装得上、卸得净」。
+/// 主窗退出走 RemovePackageAsync, 保持「装得上、卸得净」。
 /// </summary>
 internal static class ShellExtRegistration
 {
@@ -39,16 +38,26 @@ internal static class ShellExtRegistration
     {
         if (!File.Exists(DllPath)) return; // 老包无 DLL, 不注册
 
-        var manifestPath = WriteManifest();
-        var uri = new Uri(manifestPath);
+        var ver = typeof(ShellExtRegistration).Assembly.GetName().Version?.ToString(3) ?? "1.0.7";
+        var manifestPath = WriteManifest(ver);
+        var markerPath = Path.Combine(Path.GetDirectoryName(manifestPath)!, "ShellExtSparse.version");
+        // 幂等: 同版本已注册过就不再碰 PackageManager (查询接口部分主机需提权, 用落盘标记替代)。
+        try { if (File.Exists(markerPath) && File.ReadAllText(markerPath).Trim() == ver) return; }
+        catch (IOException) { /* 标记读不动就按未注册走, 重复注册无害 */ }
+
+        // 外部位置 = 安装目录 (DLL 与 app-icon.png 都在 exe 旁), 清单文件落数据目录。
+        var options = new AddPackageOptions
+        {
+            ExternalLocationUri = new Uri(AppContext.BaseDirectory),
+            AllowUnsigned = true
+        };
         var mgr = new PackageManager();
-
-        if (mgr.FindPackagesForCurrentUser(PackageIdPublisher, PackageIdName).GetEnumerator().MoveNext())
-            return; // 已注册, 幂等退出
-
-        var result = await mgr.AddPackageByUriAsync(
-            uri, new AddPackageOptions { ExternalLocationUri = new Uri(Path.GetDirectoryName(manifestPath)!) });
-        if (result.IsRegistered) return;
+        var result = await mgr.AddPackageByUriAsync(new Uri(manifestPath), options);
+        if (result.IsRegistered)
+        {
+            try { File.WriteAllText(markerPath, ver); } catch (IOException) { /* 标记写不进不影响注册 */ }
+            return;
+        }
         ThemeService.LogEvent($"ShellExt注册未成: {result.ErrorText}");
     }
 
@@ -57,8 +66,11 @@ internal static class ShellExtRegistration
         try
         {
             var mgr = new PackageManager();
-            foreach (var p in mgr.FindPackagesForCurrentUser(PackageIdPublisher, PackageIdName))
+            foreach (var p in mgr.FindPackages())
+            {
+                if (!string.Equals(p.Id.Name, PackageIdName, StringComparison.OrdinalIgnoreCase)) continue;
                 await mgr.RemovePackageAsync(p.Id.FullName);
+            }
         }
         catch (Exception ex)
         {
@@ -66,55 +78,63 @@ internal static class ShellExtRegistration
         }
     }
 
-    /// <summary>生成临时稀疏包清单 (装到数据目录, 不污染安装目录)。</summary>
-    private static string WriteManifest()
+    /// <summary>生成稀疏包清单 (装到数据目录, 引用安装目录的 DLL 与图标)。</summary>
+    private static string WriteManifest(string ver)
     {
         var dir = TaoPaths.DataDir("TaoZip");
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, ManifestFileName);
-        var ver = typeof(ShellExtRegistration).Assembly.GetName().Version?.ToString(3) ?? "1.0.7";
-        var xml = $"""<?xml version="1.0" encoding="utf-8"?>
-<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
-         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-         xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
-         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-         IgnorableNamespaces="uap10">
-  <Identity Name="{PackageIdName}" Publisher="{PackageIdPublisher}" Version="{ver}.0" />
-  <Properties>
-    <DisplayName>{PackageDisplayName}</DisplayName>
-    <PublisherDisplayName>Tao</PublisherDisplayName>
-    <Logo>app-icon.png</Logo>
-    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
-  </Properties>
-  <Applications>
-    <Application Id="TaoZipShellExt" Executable="TaoZip.exe" EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements DisplayName="{PackageDisplayName}" Description="TaoZip File Explorer integration"
-                          Square150x150Logo="app-icon.png" Square44x44Logo="app-icon.png"
-                          BackgroundColor="transparent" />
-      <Extensions>
-        <com:Extension Category="windows.comServer" xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10">
-          <com:ComServer>
-            <com:ExeServerExecutable>TaoZipShellext.dll</com:ExeServerExecutable>
-            <com:Class Id="C1D2E3F4-5A6B-7C8D-9E0F-1A2B3C4D5E6F" DisplayName="TaoZip Extract"/>
-            <com:Class Id="D2E3F4A5-6B7C-8D9E-0F1A-2B3C4D5E6F7A" DisplayName="TaoZip Compress"/>
-          </com:ComServer>
-        </com:Extension>
-        <uap3:Extension Category="windows.fileExplorerContextMenus"
-                        xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3">
-          <uap3:FileExplorerContextMenus>
-            <uap3:ItemType Type="*">
-              <uap3:Verb Id="TaoZipExtract" Clsid="C1D2E3F4-5A6B-7C8D-9E0F-1A2B3C4D5E6F" />
-              <uap3:Verb Id="TaoZipCompress" Clsid="D2E3F4A5-6B7C-8D9E-0F1A-2B3C4D5E6F7A" />
-            </uap3:ItemType>
-          </uap3:FileExplorerContextMenus>
-        </uap3:Extension>
-      </Extensions>
-    </Application>
-  </Applications>
-  <Capabilities>
-    <rescap:Capability Name="runFullTrust" />
-  </Capabilities>
-</Package>""";
+        // Schema per MS Learn: com:SurrogateServer + desktop4/desktop5 fileExplorerContextMenus;
+        // sparse package: uap10:AllowExternalContent + mediumIL/win32App application.
+        var xml = $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+                     xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+                     xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+                     xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+                     xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+                     xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+                     xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
+                     IgnorableNamespaces="uap10 com desktop4 desktop5">
+              <Identity Name="{PackageIdName}" Publisher="{PackageIdPublisher}" Version="{ver}.0" />
+              <Properties>
+                <DisplayName>{PackageDisplayName}</DisplayName>
+                <PublisherDisplayName>Tao</PublisherDisplayName>
+                <Logo>app-icon.png</Logo>
+                <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+              </Properties>
+              <Applications>
+                <Application Id="TaoZipShellExt" Executable="TaoZip.exe"
+                             uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
+                  <uap:VisualElements AppListEntry="none" DisplayName="{PackageDisplayName}"
+                                      Description="TaoZip File Explorer integration"
+                                      Square150x150Logo="app-icon.png" Square44x44Logo="app-icon.png"
+                                      BackgroundColor="transparent" />
+                  <Extensions>
+                    <com:Extension Category="windows.comServer">
+                      <com:ComServer>
+                        <com:SurrogateServer DisplayName="TaoZip Shell Extension">
+                          <com:Class Id="C1D2E3F4-5A6B-7C8D-9E0F-1A2B3C4D5E6F" Path="TaoZipShellext.dll" ThreadingModel="STA" />
+                          <com:Class Id="D2E3F4A5-6B7C-8D9E-0F1A-2B3C4D5E6F7A" Path="TaoZipShellext.dll" ThreadingModel="STA" />
+                        </com:SurrogateServer>
+                      </com:ComServer>
+                    </com:Extension>
+                    <desktop4:Extension Category="windows.fileExplorerContextMenus">
+                      <desktop4:FileExplorerContextMenus>
+                        <desktop5:ItemType Type="*">
+                          <desktop5:Verb Id="TaoZipExtract" Clsid="C1D2E3F4-5A6B-7C8D-9E0F-1A2B3C4D5E6F" />
+                          <desktop5:Verb Id="TaoZipCompress" Clsid="D2E3F4A5-6B7C-8D9E-0F1A-2B3C4D5E6F7A" />
+                        </desktop5:ItemType>
+                      </desktop4:FileExplorerContextMenus>
+                    </desktop4:Extension>
+                  </Extensions>
+                </Application>
+              </Applications>
+              <Capabilities>
+                <rescap:Capability Name="runFullTrust" />
+              </Capabilities>
+            </Package>
+            """;
         File.WriteAllText(path, xml);
         return path;
     }

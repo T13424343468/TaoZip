@@ -1,6 +1,7 @@
-; TaoZipShellext.def - exports (zero Chinese in identifiers).
+; TaoZipShellext.def - standard COM exports (SurrogateServer loads via these).
 LIBRARY TaoZipShellext
 EXPORTS
-    DllGetCommandFactory   PRIVATE
+    DllGetClassObject      PRIVATE
+    DllCanUnloadNow        PRIVATE
     DllRegisterServer      PRIVATE
     DllUnregisterServer    PRIVATE

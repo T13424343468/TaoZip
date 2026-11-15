@@ -1,13 +1,22 @@
-// dllmain.cpp - DLL entry + class factory for the two commands.
+// dllmain.cpp - DLL entry + standard COM exports for the two commands.
+// Standard exports (DllGetClassObject / DllCanUnloadNow) are what SurrogateServer
+// loads the DLL through; without them the shell extension never activates.
 #include "TaoZipCommands.h"
 
 #include <objbase.h>
+#include <new>
 
 namespace TaoZip
 {
+    // CLSIDs must match TaoZipShellext.idl and the sparse-package manifest.
+    static const GUID kExtractClsid =
+    { 0xC1D2E3F4, 0x5A6B, 0x7C8D, { 0x9E, 0x0F, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6F } };
+    static const GUID kCompressClsid =
+    { 0xD2E3F4A5, 0x6B7C, 0x8D9E, { 0x0F, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6F, 0x7A } };
+
     static long g_lockCount = 0;
 
-    // Class factory: single instance per CLSID.
+    // Class factory: one instance per CLSID request.
     class CommandFactory final : public IClassFactory
     {
     public:
@@ -60,28 +69,33 @@ namespace TaoZip
     };
 }
 
-extern "C" __declspec(dllexport) HRESULT STDAPICALLTYPE DllGetCommandFactory(int buttonKind, REFIID riid, void** ppv)
+// ---- Standard COM exports (required by com:SurrogateServer activation) ----
+
+__declspec(dllexport) HRESULT STDAPICALLTYPE DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
 {
-    TaoZip::CommandFactory* f = new (std::nothrow) TaoZip::CommandFactory(buttonKind);
-    if (!f) return E_OUTOFMEMORY;
-    HRESULT hr = f->QueryInterface(riid, ppv);
-    f->Release();
+    if (!ppv) return E_POINTER;
+    int kind = IsEqualCLSID(rclsid, TaoZip::kExtractClsid) ? 1
+             : IsEqualCLSID(rclsid, TaoZip::kCompressClsid) ? 2
+             : 0;
+    if (kind == 0) return CLASS_E_CLASSNOTAVAILABLE;
+    TaoZip::CommandFactory* factory = new (std::nothrow) TaoZip::CommandFactory(kind);
+    if (!factory) return E_OUTOFMEMORY;
+    HRESULT hr = factory->QueryInterface(riid, ppv);
+    factory->Release();
     return hr;
 }
 
-static HRESULT RegisterCommand(HKEY root, const wchar_t* clsid, const wchar_t* text, const wchar_t* iconPath)
+__declspec(dllexport) HRESULT STDAPICALLTYPE DllCanUnloadNow(void)
 {
-    wchar_t key[256];
-    swprintf_s(key, 256, L"Software\\Classes\\TaoZip.%s\\ShellExt", text); // placeholder (wired below)
-    return S_OK;
+    return g_lockCount == 0 ? S_OK : S_FALSE;
 }
 
-BOOL APIENTRY DllMain(HMODULE, DWORD reason, LPVOID)
+BOOL APIENTRY DllMain(HMODULE hmod, DWORD reason, LPVOID)
 {
-    if (reason == DLL_PROCESS_ATTACH) DisableThreadLibraryCalls(GetModuleHandleW(nullptr));
+    if (reason == DLL_PROCESS_ATTACH) DisableThreadLibraryCalls(hmod);
     return TRUE;
 }
 
-// Exported for regsvr32-based classic menu fallback registration.
+// regsvr32 fallback stubs: classic-menu registration stays with the MSI.
 __declspec(dllexport) HRESULT __stdcall DllRegisterServer(void) { return S_OK; }
 __declspec(dllexport) HRESULT __stdcall DllUnregisterServer(void) { return S_OK; }

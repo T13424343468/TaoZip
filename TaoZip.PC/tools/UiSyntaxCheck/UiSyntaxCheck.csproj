@@ -12,6 +12,7 @@
     <Compile Include="..\..\ui\TaoZip.PC.App\ExtractWindow.xaml.cs" Link="ExtractWindow.xaml.cs" />
     <Compile Include="..\..\ui\TaoZip.PC.App\CompressWindow.xaml.cs" Link="CompressWindow.xaml.cs" />
     <Compile Include="..\..\ui\TaoZip.PC.App\App.xaml.cs" Link="App.xaml.cs" />
+    <Compile Include="..\..\ui\TaoZip.PC.App\ShellExtRegistration.cs" Link="ShellExtRegistration.cs" />
     <Compile Include="..\..\ui\TaoZip.PC.App\ThemeService.cs" Link="ThemeService.cs" />
     <Compile Include="..\..\ui\TaoZip.PC.App\TrayIcon.cs" Link="TrayIcon.cs" />
     <Compile Include="..\..\ui\TaoZip.PC.App\AppIcon.cs" Link="AppIcon.cs" />

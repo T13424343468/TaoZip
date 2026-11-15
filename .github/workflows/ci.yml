@@ -6,6 +6,24 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  changes:
+    name: 改动范围识别
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      android: ${{ steps.f.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: f
+        with:
+          # 纯 PC 改动跳过安卓重型作业 (APK 编译+模拟器触控); 流水线自身变更仍全量跑一遍
+          filters: |
+            android:
+              - 'ZipGo/**'
+              - 'tools/android-touch-test.sh'
+              - '.github/workflows/ci.yml'
+
   core-tests:
     name: 全测（PC xunit + 安卓逻辑全测）
     runs-on: ubuntu-latest
@@ -76,6 +94,8 @@ jobs:
 
   android-build:
     name: Android 真机层编译（APK）
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -92,6 +112,8 @@ jobs:
 
   android-ui:
     name: 云端真机真人触控实测（模拟器）
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

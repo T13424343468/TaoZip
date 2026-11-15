@@ -6,7 +6,7 @@ import os, sys, struct, zipfile
 # ROOT 必须是 TaoZip.PC/ 本身 (本脚本在 tools/ 下, 往上两级); v88 修正: 原写法把 tools 当成了根,
 # 打出的包只有 tools 子树 47 项且落在树内, 主程序源码全部缺席——交付前必须抽验包内代码内容
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(os.path.dirname(ROOT), "TaoZip-PC-Full-v91.zip")
+OUT = os.environ.get("TAOZIP_OUT") or os.path.join(os.path.dirname(ROOT), "TaoZip-PC-Full-v94.zip")
 EXCLUDE_DIRS = {"bin", "obj", "bin-check", ".vs", ".git", ".idea"}
 
 entries = []
@@ -20,6 +20,13 @@ for dirpath, dirnames, filenames in os.walk(ROOT):
         if not rel.isascii():
             print("NON-ASCII PATH:", rel); sys.exit(1)
         entries.append((full, rel))
+
+# CI 产出的 MSI (TAOZIP_MSI 指向) 放到包根, 与 v93 交付形态一致
+_msi = os.environ.get("TAOZIP_MSI", "")
+if _msi:
+    assert os.path.isfile(_msi), "TAOZIP_MSI 指向的 MSI 不存在: " + _msi
+    assert os.path.basename(_msi).isascii(), "MSI 文件名非 ASCII: " + _msi
+    entries.append((_msi, os.path.basename(_msi)))
 
 with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as z:
     for full, rel in sorted(entries, key=lambda e: e[1]):

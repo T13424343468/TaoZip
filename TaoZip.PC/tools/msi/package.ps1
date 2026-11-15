@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)][string]$PublishDir,
     [string]$OutDir = "out"
 )
-$ScriptVersion = "v91-1106"
+$ScriptVersion = "v94-1115"
 Write-Host "打包脚本版本: $ScriptVersion (若日志无此行, 说明运行的是旧脚本, 请全新目录解压重试)"
 $ErrorActionPreference = 'Stop'
 $publishRoot = (Resolve-Path $PublishDir).Path

@@ -70,8 +70,9 @@ namespace TaoZip
 }
 
 // ---- Standard COM exports (required by com:SurrogateServer activation) ----
+// Exported via TaoZipShellext.def; linkage must match objbase.h declarations.
 
-__declspec(dllexport) HRESULT STDAPICALLTYPE DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
+STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
 {
     if (!ppv) return E_POINTER;
     int kind = IsEqualCLSID(rclsid, TaoZip::kExtractClsid) ? 1
@@ -85,9 +86,9 @@ __declspec(dllexport) HRESULT STDAPICALLTYPE DllGetClassObject(REFCLSID rclsid, 
     return hr;
 }
 
-__declspec(dllexport) HRESULT STDAPICALLTYPE DllCanUnloadNow(void)
+STDAPI DllCanUnloadNow(void)
 {
-    return g_lockCount == 0 ? S_OK : S_FALSE;
+    return TaoZip::g_lockCount == 0 ? S_OK : S_FALSE;
 }
 
 BOOL APIENTRY DllMain(HMODULE hmod, DWORD reason, LPVOID)
@@ -97,5 +98,5 @@ BOOL APIENTRY DllMain(HMODULE hmod, DWORD reason, LPVOID)
 }
 
 // regsvr32 fallback stubs: classic-menu registration stays with the MSI.
-__declspec(dllexport) HRESULT __stdcall DllRegisterServer(void) { return S_OK; }
-__declspec(dllexport) HRESULT __stdcall DllUnregisterServer(void) { return S_OK; }
+STDAPI DllRegisterServer(void) { return S_OK; }
+STDAPI DllUnregisterServer(void) { return S_OK; }

@@ -250,11 +250,16 @@ jobs:
           Remove-Item (Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log') -Force -ErrorAction SilentlyContinue
           # msiexec 等待加 15 分钟封顶挂起守卫: run 43599577839 实锤引擎 5 秒装完、-Wait 等待层死等 38 分钟; 超时/失败抓日志尾部再 fail
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\install.log" -LogPath out\install.log
+          Write-Host "assert: install-dir"
           if (-not (Test-Path 'D:\Program Files\TaoZip\TaoZip.exe')) { throw "首装后安装目录没有 TaoZip.exe" }
+          Write-Host "assert: zip-extract reg"
           $ctx = Get-Item 'HKLM:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -ErrorAction SilentlyContinue
           if (-not $ctx) { throw "首装后右键解压登记缺失（.zip shell TaoZip.Extract）" }
-          $ctx2 = Get-Item 'HKLM:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -ErrorAction SilentlyContinue
+          Write-Host "assert: all-files compress reg"
+          # 字面量键名就是 *, 必须用 -LiteralPath; 通配符写法会枚举整个 Classes 清单 (run 44880973415 挂死 36 分钟的头号嫌疑)
+          $ctx2 = Get-Item -LiteralPath 'HKLM:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -ErrorAction SilentlyContinue
           if (-not $ctx2) { throw "首装后右键压缩登记缺失（* shell TaoZip.Compress）" }
+          Write-Host "assert: uninstall reg"
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "首装后没有卸载登记" }
@@ -281,6 +286,7 @@ jobs:
           ./TaoZip.PC/tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out-upgrade
           $msi = (Get-Item out-upgrade\*.msi).FullName
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\upgrade.log" -LogPath out\upgrade.log
+          Write-Host "assert: uninstall reg"
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "升级后没有卸载登记" }
@@ -291,6 +297,7 @@ jobs:
         run: |
           $msi = (Get-Item out-upgrade\*.msi).FullName
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/x `"$msi`" /qn /l*v out\uninstall.log" -LogPath out\uninstall.log
+          Write-Host "assert: uninstall reg"
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if ($unins) { throw "卸载后卸载登记仍在" }

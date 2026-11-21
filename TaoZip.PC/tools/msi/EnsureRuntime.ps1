@@ -54,8 +54,11 @@ try {
         # 无网且无运行时: 说人话重试指引 (交互装弹窗; 静默装落日志后中止)
         $msg = "TaoZip 需要联网下载 .NET 运行时（约 60 MB），当前没有检测到网络连接。`n`n请连上网络后重新运行安装程序即可，无需其他操作。"
         try {
-            Add-Type -AssemblyName System.Windows.Forms
-            [System.Windows.Forms.MessageBox]::Show($msg, 'TaoZip 安装', 'OK', 'Information') | Out-Null
+            # 仅交互会话弹窗; SYSTEM/会话0 里弹窗无人点击会挂死安装 (防御性修复)
+            if ([Environment]::UserInteractive) {
+                Add-Type -AssemblyName System.Windows.Forms
+                [System.Windows.Forms.MessageBox]::Show($msg, 'TaoZip 安装', 'OK', 'Information') | Out-Null
+            }
         } catch { }
         exit 1602
     }

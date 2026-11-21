@@ -279,7 +279,7 @@ jobs:
           # 应用运行时写 HKCU 同名键: 右键解压/压缩、默认关联、还原备份
           New-Item -Path 'HKCU:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -Force | Out-Null
           Set-ItemProperty -Path 'HKCU:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -Name '(default)' -Value '"D:\Program Files\TaoZip\TaoZip.exe" --extract "%1"'
-          New-Item -LiteralPath 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -Force | Out-Null
+          New-Item -Path 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -Force | Out-Null
           Set-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -Name '(default)' -Value '"D:\Program Files\TaoZip\TaoZip.exe" --compress "%1"'
           New-Item -Path 'HKCU:\SOFTWARE\Classes\TaoZip.Archive' -Force | Out-Null
           Set-ItemProperty -Path 'HKCU:\SOFTWARE\Classes\TaoZip.Archive' -Name '(default)' -Value 'TaoZip Archive'

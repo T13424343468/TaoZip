@@ -6,7 +6,7 @@ import os, sys, struct, zipfile
 # ROOT 必须是 TaoZip.PC/ 本身 (本脚本在 tools/ 下, 往上两级); v88 修正: 原写法把 tools 当成了根,
 # 打出的包只有 tools 子树 47 项且落在树内, 主程序源码全部缺席——交付前必须抽验包内代码内容
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.environ.get("TAOZIP_OUT") or os.path.join(os.path.dirname(ROOT), "TaoZip-PC-Full-v94.zip")
+OUT = os.environ.get("TAOZIP_OUT") or os.path.join(os.path.dirname(ROOT), "TaoZip-PC-Full-v95.zip")
 EXCLUDE_DIRS = {"bin", "obj", "bin-check", ".vs", ".git", ".idea"}
 
 entries = []

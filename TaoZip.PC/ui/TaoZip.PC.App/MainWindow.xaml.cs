@@ -49,6 +49,9 @@ public sealed partial class MainWindow : Window
         _suppressThemeChange = false;
         // 旧版本残留的右键注册表键若指向已删除的旧程序, 会遮蔽新键导致菜单不生效, 启动时静默修复
         FileAssoc.RepairStaleCommands();
+        // v98: 升级被安装器清掉的用户级关联键, 按落盘的勾选状态重建 (老板令: 安装勾选就得生效)
+        FileAssoc.RestoreFromState();
+        FileAssoc.SaveState();
         EnsureHistoryWatcher(); // v89: 记录文件一有变化 (含右键小窗写入) 即防抖刷新
         HandleCommandLine();
         // v71 诊断基线: 主窗内容正常渲染, 自检结果作为小窗空白问题的对照组
@@ -132,6 +135,7 @@ public sealed partial class MainWindow : Window
         if (ctxCompress.IsChecked == true) FileAssoc.SetCompressMenuAll();
         else if (ctxCompress.IsChecked == false && FileAssoc.HasCompressMenu()) FileAssoc.RemoveCompressMenuAll();
         FileAssoc.RefreshExplorer();
+        FileAssoc.SaveState(); // v98: 勾选状态落盘, 升级清键后启动可重建
         Status("文件关联已更新 (默认打开方式 / 右键解压 / 右键压缩)");
     }
 

@@ -193,6 +193,91 @@ public static class FileAssoc
         }
     }
 
+    // ---- 用户级勾选状态持久化与启动重建 (v98) ----
+    // 老板令: 安装勾选就得生效, 卸载就得卸得干干净净。
+    // 安装器真卸载会清 HKCU 用户级关联键 (卸载即干净); 升级走 MajorUpgrade 移除旧产品时同样会清
+    // (云测 run 44911538340 实锤, MSI 无法在 Registry 层区分升级移除与真卸载)。
+    // 兜底: 勾选状态落盘到安装器清不到的 ProgramData, 启动时发现"状态为勾选而用户级键缺失"即重建。
+    private static string StateFilePath
+    {
+        get
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "TaoZip");
+            return Path.Combine(dir, "assoc-state.json");
+        }
+    }
+
+    internal class AssocState
+    {
+        public bool CtxExtract { get; set; }
+        public bool CtxCompress { get; set; }
+        public Dictionary<string, bool> Defaults { get; set; } = new();
+    }
+
+    private static bool UserKeyExists(string keyPath)
+        => Registry.CurrentUser.OpenSubKey($"Software\\Classes\\{keyPath}") != null;
+
+    private static bool UserDefaultIsOurs(string ext)
+    {
+        using var k = Registry.CurrentUser.OpenSubKey($"Software\\Classes\\{ext}");
+        return k?.GetValue(null) as string == ProgId;
+    }
+
+    /// <summary>把当前用户级勾选状态落盘 (幂等; 勾选操作与启动重建后调用)。</summary>
+    public static void SaveState()
+    {
+        try
+        {
+            var state = new AssocState
+            {
+                CtxExtract = Extensions.All(e => UserKeyExists($"SystemFileAssociations\\{e}\\{MenuKey}")),
+                CtxCompress = UserKeyExists(CompressKeyFiles) && UserKeyExists(CompressKeyDir),
+                Defaults = Extensions.ToDictionary(e => e, e => UserDefaultIsOurs(e)),
+            };
+            var dir = Path.GetDirectoryName(StateFilePath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(StateFilePath, System.Text.Json.JsonSerializer.Serialize(state));
+        }
+        catch { /* 状态保存失败不影响主功能, 下次勾选再试 */ }
+    }
+
+    /// <summary>
+    /// 启动重建: 勾选状态为"开"而用户级键缺失 (升级被安装器清掉) 时, 按状态文件重建用户级键。
+    /// 状态文件不存在或全为"关"时不动作; 重建失败不影响主功能, 下次启动再试。
+    /// </summary>
+    public static void RestoreFromState()
+    {
+        try
+        {
+            if (!File.Exists(StateFilePath)) return;
+            var state = System.Text.Json.JsonSerializer.Deserialize<AssocState>(File.ReadAllText(StateFilePath));
+            if (state == null) return;
+            var changed = false;
+            if (state.CtxExtract && Extensions.Any(e => !UserKeyExists($"SystemFileAssociations\\{e}\\{MenuKey}")))
+            {
+                SetContextMenuAll();
+                changed = true;
+            }
+            if (state.CtxCompress && (!UserKeyExists(CompressKeyFiles) || !UserKeyExists(CompressKeyDir)))
+            {
+                SetCompressMenuAll();
+                changed = true;
+            }
+            foreach (var ext in Extensions)
+            {
+                if (state.Defaults.TryGetValue(ext, out var want) && want && !UserDefaultIsOurs(ext))
+                {
+                    SetDefault(ext);
+                    changed = true;
+                }
+            }
+            if (changed) RefreshExplorer();
+        }
+        catch { /* 自愈失败不影响主功能, 下次启动再试 */ }
+    }
+
     /// <summary>通知资源管理器刷新文件关联图标与菜单。</summary>
     public static void RefreshExplorer()
         => SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero); // SHCNE_ASSOCCHANGED

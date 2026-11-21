@@ -398,5 +398,15 @@ public class OperationTests : IDisposable
         // 版本推进: 1.0.10 (v98 修红: 安装器装时清 HKCU 用户级关联键致关联全没——只留卸载清, 自愈兜底)
         var csproj = File.ReadAllText(Path.Combine(_ui, "TaoZip.PC.App.csproj"));
         Assert.Contains("<Version>1.0.10</Version>", csproj);
+
+        // v98 自愈闭环: 勾选状态落盘 + 启动重建 (老板令: 安装勾选就得生效, 升级清键后自动恢复)
+        var fileAssoc = File.ReadAllText(Path.Combine(_ui, "FileAssoc.cs"));
+        Assert.Contains("assoc-state.json", fileAssoc);
+        Assert.Contains("public static void SaveState()", fileAssoc);
+        Assert.Contains("public static void RestoreFromState()", fileAssoc);
+        Assert.Contains("CommonApplicationData", fileAssoc); // 状态存 ProgramData, 安装器清不到
+        var main = File.ReadAllText(Path.Combine(_ui, "MainWindow.xaml.cs"));
+        Assert.Contains("FileAssoc.RestoreFromState();", main);
+        Assert.Contains("FileAssoc.SaveState();", main);
     }
 }

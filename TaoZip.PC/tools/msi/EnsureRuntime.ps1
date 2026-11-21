@@ -15,14 +15,21 @@ function Write-RtLog([string]$m) {
     try { Add-Content -Path $log -Value ("{0} {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $m) } catch { }
 }
 function Test-DesktopRuntime10 {
-    # 以系统实际注册为准: 注册表 InstalledVersions 任一 10.x 键, 或统一目录 shared 下有 10.x 桌面运行时
+    # 以系统实际注册为准: 统一目录 shared 下有 10.x 桌面运行时, 或注册表 InstalledVersions 有 10.x 键。
+    # 注意: 本脚本由 WiX 自定义动作以 32 位 PowerShell 执行 (SysWOW64), $env:ProgramFiles 会指到
+    #   'C:\Program Files (x86)', 注册表也会被重定向到 Wow6432Node (run 44875970874 实锤漏检);
+    #   故目录按 64 位固定路径查, 注册表显式开 Registry64 视图。
     try {
-        $rk = Get-ChildItem 'HKLM:\SOFTWARE\dotnet\Setup\InstalledVersions\x64' -ErrorAction SilentlyContinue |
-              Where-Object { $_.PSChildName -like '10.*' }
-        if ($rk) { return $true }
-        $shared = Get-ChildItem (Join-Path $env:ProgramFiles 'dotnet\shared\Microsoft.WindowsDesktop.App') -ErrorAction SilentlyContinue |
+        $shared = Get-ChildItem 'C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App' -ErrorAction SilentlyContinue |
                   Where-Object { $_.Name -like '10.*' }
-        return ($null -ne $shared)
+        if ($shared) { return $true }
+        $rk = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', [Microsoft.Win32.RegistryView]::Registry64)
+        $sub = $rk.OpenSubKey('SOFTWARE\dotnet\Setup\InstalledVersions\x64')
+        if ($sub) {
+            $hit = @($sub.GetSubKeyNames() | Where-Object { $_ -like '10.*' })
+            if ($hit.Count -gt 0) { return $true }
+        }
+        return $false
     } catch { return $false }
 }
 if ($env:TAOZIP_FORCE_RUNTIME_DOWNLOAD -ne '1' -and (Test-DesktopRuntime10)) {
@@ -36,14 +43,22 @@ try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri $url -OutFile $exe -UseBasicParsing
 } catch {
-    Write-RtLog ("download-failed " + $_.Exception.Message)
-    # 无网且无运行时: 说人话重试指引 (交互装弹窗; 静默装落日志后中止)
-    $msg = "TaoZip 需要联网下载 .NET 运行时（约 60 MB），当前没有检测到网络连接。`n`n请连上网络后重新运行安装程序即可，无需其他操作。"
+    # 32 位 PS 5.1 在 SYSTEM 上下文的下载路偶发秒败 (run 44875970874 实锤), 回落系统自带 curl.exe 再试一次
+    Write-RtLog ("iwr-failed " + $_.Exception.Message + ", fallback to curl.exe")
     try {
-        Add-Type -AssemblyName System.Windows.Forms
-        [System.Windows.Forms.MessageBox]::Show($msg, 'TaoZip 安装', 'OK', 'Information') | Out-Null
-    } catch { }
-    exit 1602
+        $p = Start-Process -FilePath 'curl.exe' -ArgumentList '-L', '-f', '-o', "`"$exe`"", '--max-time', '600', "`"$url`"" -Wait -PassThru -NoNewWindow
+        if ($p.ExitCode -ne 0) { throw "curl exit=$($p.ExitCode)" }
+        if (-not (Test-Path $exe) -or (Get-Item $exe).Length -lt 10MB) { throw "curl 产物异常偏小" }
+    } catch {
+        Write-RtLog ("download-failed " + $_.Exception.Message)
+        # 无网且无运行时: 说人话重试指引 (交互装弹窗; 静默装落日志后中止)
+        $msg = "TaoZip 需要联网下载 .NET 运行时（约 60 MB），当前没有检测到网络连接。`n`n请连上网络后重新运行安装程序即可，无需其他操作。"
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            [System.Windows.Forms.MessageBox]::Show($msg, 'TaoZip 安装', 'OK', 'Information') | Out-Null
+        } catch { }
+        exit 1602
+    }
 }
 Write-RtLog 'download-ok, installing to system dotnet dir (passive 进度条)'
 $p = Start-Process -FilePath $exe -ArgumentList '/install', '/passive', '/norestart' -Wait -PassThru

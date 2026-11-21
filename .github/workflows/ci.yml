@@ -141,6 +141,12 @@ jobs:
         with:
           name: taozip-android-apk
           path: out/android/*.apk
+      - name: 开启 KVM 硬件加速权限 (动作 auto 探测误判致 -accel off, 新模拟器拒绝软件仿真, run 44870126512 实锤)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
       - name: 云端真机装机 + 真人触控实测
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -148,6 +154,7 @@ jobs:
           arch: x86_64
           force-avd-creation: false
           disable-animations: false
+          disable-linux-hw-accel: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
           script: bash tools/android-touch-test.sh
       - name: 存档实测证据
@@ -228,7 +235,7 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-Item out\*.msi).FullName
-          Remove-Item (Join-Path $env:TEMP 'taozip-runtime.log') -Force -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log') -Force -ErrorAction SilentlyContinue
           # msiexec 等待加 15 分钟封顶挂起守卫: run 43599577839 实锤引擎 5 秒装完、-Wait 等待层死等 38 分钟; 超时/失败抓日志尾部再 fail
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\install.log" -LogPath out\install.log
           if (-not (Test-Path 'D:\Program Files\TaoZip\TaoZip.exe')) { throw "首装后安装目录没有 TaoZip.exe" }
@@ -244,7 +251,7 @@ jobs:
         shell: pwsh
         run: |
           # 新标准断言一: 云台已装 .NET 10 桌面运行时, 首装必须零下载直接用
-          $log = Join-Path $env:TEMP 'taozip-runtime.log'
+          $log = Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log'
           if (-not (Test-Path $log)) { throw "运行时保障日志缺失: $log" }
           $lines = Get-Content $log
           if (-not ($lines | Where-Object { $_ -match 'runtime-present zero-download' })) { throw "首装未走零下载路: $($lines -join '; ')" }
@@ -300,10 +307,10 @@ jobs:
         run: |
           # 新标准断言二: 强制走下载路, 官方运行时装进系统统一 .NET 目录后装齐
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/x `"$((Get-Item out-upgrade\*.msi).FullName)`" /qn" -LogPath out\uninstall2.log
-          Remove-Item (Join-Path $env:TEMP 'taozip-runtime.log') -Force -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log') -Force -ErrorAction SilentlyContinue
           $env:TAOZIP_FORCE_RUNTIME_DOWNLOAD = '1'
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$((Get-Item out-upgrade\*.msi).FullName)`" /qn /l*v out\forced-runtime.log" -LogPath out\forced-runtime.log
-          $log = Join-Path $env:TEMP 'taozip-runtime.log'
+          $log = Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log'
           if (-not (Test-Path $log)) { throw "运行时保障日志缺失: $log" }
           $lines = Get-Content $log
           if (-not ($lines | Where-Object { $_ -match 'runtime-download-install ok' })) { throw "强制下载路未装齐: $($lines -join '; ')" }

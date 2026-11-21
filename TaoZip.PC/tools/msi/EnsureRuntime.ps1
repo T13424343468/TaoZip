@@ -5,7 +5,12 @@
 #   无网且无运行时给通俗重试指引。
 # 云测钩子: TAOZIP_FORCE_RUNTIME_DOWNLOAD=1 强制走下载路 (断言二用), 日常安装不设即走检测路。
 $ErrorActionPreference = 'Stop'
-$log = Join-Path $env:TEMP 'taozip-runtime.log'
+# 日志落机器级固定路径: 本脚本由 WiX 自定义动作在 per-machine msiexec (SYSTEM) 上下文执行,
+#   $env:TEMP 指向 C:\Windows\Temp, 云测断言按 runner 用户 TEMP 查不到 (run 44870126512 实锤);
+#   ProgramData 下产品目录全用户可读, SYSTEM/用户均可写
+$rtLogDir = Join-Path $env:ProgramData 'TaoZip'
+if (-not (Test-Path $rtLogDir)) { New-Item -ItemType Directory -Force -Path $rtLogDir | Out-Null }
+$log = Join-Path $rtLogDir 'taozip-runtime.log'
 function Write-RtLog([string]$m) {
     try { Add-Content -Path $log -Value ("{0} {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $m) } catch { }
 }

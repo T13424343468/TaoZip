@@ -16,6 +16,8 @@ namespace TaoZip.PC.App
         public static void SetCompressMenuAll() { }
         public static void RemoveCompressMenuAll() { }
         public static void RepairStaleCommands() { }
+        public static void SaveState() { }
+        public static void RestoreFromState() { }
         public static void RefreshExplorer() { }
     }
 }

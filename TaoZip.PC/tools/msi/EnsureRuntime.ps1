@@ -1,6 +1,6 @@
 ﻿# TaoZip 安装器运行时保障 (2026-11-21 全系安装器新标准, 老板令)
 # 口径: 安装包不内置 .NET 运行时; 安装期以系统实际注册为准全盘检测所需运行时;
-#   有则零下载直接用; 无则联网下载官方运行时并显示进度, 装进系统统一 .NET 目录
+#   有则零下载直接用; 无则联网下官方运行时 (dotnet-install 官方脚本) 装进系统统一 .NET 目录
 #   (C:\Program Files\dotnet, 与现有版本同处一地, 不单独建运行时目录);
 #   无网且无运行时给通俗重试指引。
 # 云测钩子: TAOZIP_FORCE_RUNTIME_DOWNLOAD=1 强制走下载路 (断言二用), 日常安装不设即走检测路。
@@ -38,18 +38,20 @@ if ($env:TAOZIP_FORCE_RUNTIME_DOWNLOAD -ne '1' -and (Test-DesktopRuntime10)) {
     exit 0
 }
 Write-RtLog 'runtime-missing, downloading official runtime'
-$url = 'https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe'
-$exe = Join-Path $env:TEMP 'windowsdesktop-runtime-win-x64.exe'
+# 官方运行时装法: dotnet-install 官方脚本直装系统统一 .NET 目录。
+#   不用 windowsdesktop-runtime 安装器 exe——它是 MSI 链, 在本产品 MSI 事务内启动必撞
+#   _MSIExecute 互斥 → 退出码 1618 (run 44886290820 实锤); 脚本解包不走 MSI, 无互斥冲突。
+$dnScript = Join-Path $env:TEMP 'dotnet-install.ps1'
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $url -OutFile $exe -UseBasicParsing
+    Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $dnScript -UseBasicParsing
 } catch {
     # 32 位 PS 5.1 在 SYSTEM 上下文的下载路偶发秒败 (run 44875970874 实锤), 回落系统自带 curl.exe 再试一次
     Write-RtLog ("iwr-failed " + $_.Exception.Message + ", fallback to curl.exe")
     try {
-        $p = Start-Process -FilePath 'curl.exe' -ArgumentList '-L', '-f', '-o', "`"$exe`"", '--max-time', '600', "`"$url`"" -Wait -PassThru -NoNewWindow
+        $p = Start-Process -FilePath 'curl.exe' -ArgumentList '-L', '-f', '-o', "`"$dnScript`"", '--max-time', '300', '"https://dot.net/v1/dotnet-install.ps1"' -Wait -PassThru -NoNewWindow
         if ($p.ExitCode -ne 0) { throw "curl exit=$($p.ExitCode)" }
-        if (-not (Test-Path $exe) -or (Get-Item $exe).Length -lt 10MB) { throw "curl 产物异常偏小" }
+        if (-not (Test-Path $dnScript) -or (Get-Item $dnScript).Length -lt 1KB) { throw "curl 产物异常偏小" }
     } catch {
         Write-RtLog ("download-failed " + $_.Exception.Message)
         # 无网且无运行时: 说人话重试指引 (交互装弹窗; 静默装落日志后中止)
@@ -64,10 +66,9 @@ try {
         exit 1602
     }
 }
-Write-RtLog 'download-ok, installing to system dotnet dir (passive 进度条)'
-$p = Start-Process -FilePath $exe -ArgumentList '/install', '/passive', '/norestart' -Wait -PassThru
-Write-RtLog ("installer-exit " + $p.ExitCode)
-if ($p.ExitCode -notin 0, 3010) { exit $p.ExitCode }
+Write-RtLog 'download-ok, installing official runtime into system dotnet dir'
+& $dnScript -Runtime windowsdesktop -Channel 10.0 -InstallDir 'C:\Program Files\dotnet'
+if ($LASTEXITCODE -ne 0) { Write-RtLog ("dotnet-install exit " + $LASTEXITCODE); exit $LASTEXITCODE }
 if (-not (Test-DesktopRuntime10)) { Write-RtLog 'verify-failed'; exit 31337 }
 Write-RtLog 'runtime-download-install ok'
 exit 0

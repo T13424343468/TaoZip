@@ -28,6 +28,7 @@ if (-not $shellext) {
     throw "发布目录与常见编译路径均未找到 TaoZipShellext.dll (请先编译 native/TaoZip.ShellExt)"
 }
 Copy-Item $shellext (Join-Path $publishRoot 'TaoZipShellext.dll') -Force
+$publishRootEsc = [System.Security.SecurityElement]::Escape($publishRoot)
 
 # ---- 全系安装器运行时新标准 (2026-11-21 老板令): 安装包不内置 .NET 运行时 ----
 # 安装期由 EnsureRuntime.ps1 以系统实际注册为准检测所需运行时: 有则零下载直接用;
@@ -37,7 +38,8 @@ if (-not (Test-Path $rtSrc)) { throw "运行时保障脚本缺失: $rtSrc (请�
 Copy-Item $rtSrc (Join-Path $publishRoot 'EnsureRuntime.ps1') -Force
 
 # ---- 枚举发布文件: 目录树(支持多级) + 组件清单 ----
-$allFiles = Get-ChildItem -Path $publishRoot -Recurse -File
+# 外壳扩展 DLL 已有专用组件 (ShellExtF 特性), 枚举中排除防同目录同名文件重复
+$allFiles = Get-ChildItem -Path $publishRoot -Recurse -File | Where-Object { $_.Name -ne 'TaoZipShellext.dll' }
 $script:dirId = 0
 $script:dirRefs = @{}
 $tree = [ordered]@{}
@@ -346,7 +348,7 @@ $wxs = @"
 
     <Feature Id="ShellExtF" Title="文件管理器动态按钮" Level="1">
       <Component Directory="INSTALLFOLDER" Guid="B2C3D4E5-6F70-4A1B-8C9D-0E1F2A3B4C5D">
-        <File Id="TaoZipShellextDll" Source="TaoZipShellext.dll" Name="TaoZipShellext.dll" KeyPath="yes" />
+        <File Id="TaoZipShellextDll" Source="$publishRootEsc\TaoZipShellext.dll" Name="TaoZipShellext.dll" KeyPath="yes" />
         <RegistryValue Root="HKLM" Key="Software\Tao\TaoZip" Name="ShellExtInstalled" Type="integer" Value="1" KeyPath="no" />
         <!-- Win11 modern menu: DLL ships with the MSI, first-launch of TaoZip.exe
              self-registers the sparse package (AddPackageByUri), keeps the installer

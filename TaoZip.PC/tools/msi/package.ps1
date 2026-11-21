@@ -116,11 +116,14 @@ $wxs = @"
          powershell -File 找不到文件秒退 -196608 (run 44877397577 实锤); deferred 排在 InstallFiles 后即落盘后执行。
          64 位 PowerShell (System64Folder): 32 位 PS 下 ProgramFiles/注册表被重定向, 检测会漏检 (run 44875970874 实锤) -->
     <!-- cmd 包一层: 原生 exe 启动可靠 (taskkill 实证), 且把 PS 的报错重定向落盘, 1721/1722 都能拿到第一手输出 -->
+    <!-- Type 50 正确用法: 属性只放可执行文件路径, 参数全放 ExeCommand (run 44870126512 实证 PS 能起来);
+         整串命令行塞属性会被 msiexec 当可执行文件路径解析 → CreateProcess 找不到文件 → 1721
+         (run 44877397577/44879456718/44880405842 三轮实锤, 与模拟/SYSTEM 上下文无关, taskkill 同服务上下文 exit 128 跑通) -->
     <SetProperty Id="RTENSURECMD" After="InstallFiles" Sequence="execute"
-                 Value="[System64Folder]cmd.exe /c mkdir &quot;[CommonAppDataFolder]TaoZip&quot; 2&gt;nul &amp; &quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot; &gt;&gt; &quot;[CommonAppDataFolder]TaoZip\ca-out.txt&quot; 2&gt;&amp;1" />
-    <!-- Impersonate=no: 模拟用户的 deferred CA 在云台 CreateProcess 直接 1721 (run 44879456718 实锤, cmd.exe 都起不来,
-         ca-out.txt 未生成 = 进程从未启动); 改 SYSTEM 上下文跑, 机器级装运行时本就该 SYSTEM 权限 -->
-    <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD" Execute="deferred" Return="check" Impersonate="no" ExeCommand="" />
+                 Value="[System64Folder]cmd.exe" />
+    <!-- Impersonate=no: SYSTEM 上下文跑, 机器级装运行时本就该 SYSTEM 权限; cmd 包一层把 PS 报错重定向落盘拿第一手输出 -->
+    <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD" Execute="deferred" Return="check" Impersonate="no"
+                  ExeCommand="/c mkdir &quot;[CommonAppDataFolder]TaoZip&quot; 2&gt;nul &amp; &quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot; &gt;&gt; &quot;[CommonAppDataFolder]TaoZip\ca-out.txt&quot; 2&gt;&amp;1" />
     <InstallExecuteSequence>
       <Custom Action="SetKillCmd" After="InstallValidate" />
       <Custom Action="KillRunningTaoZip" After="SetKillCmd" />

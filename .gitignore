@@ -3,3 +3,4 @@ obj/
 bin-x64/
 *.user
 .vs/
+.tmp/

@@ -1,7 +1,0 @@
-MSI: TaoZip-1.0.8-x64.msi  25.4 MB
-first-install: ok 1.0.8.0
-runtime-path-natural: ok
-cover-install: ok
-upgrade: ok -> 1.0.9.0
-uninstall: ok
-visual: ok

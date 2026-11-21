@@ -1,4 +1,4 @@
-﻿# TaoZip PC 版 (WinUI 3 + .NET 8)
+﻿# TaoZip PC 版 (WinUI 3 + .NET 10)
 
 轻量压缩工具：压缩 zip / tar.gz，解压 zip / 7z / rar(仅解压) / tar / gz / bz2 / xz，
 完整性测试、智能解压、历史记录。水墨主题默认自带（Tao 系列主题，可在工具栏切换水墨/浅色/深色）。
@@ -17,10 +17,11 @@
 
 ## Windows 上构建运行
 
-1. 安装 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+1. 安装 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)（2026-11-21 起全线新项目统一 .NET 10）
 2. 双击 `build.bat`（或命令行执行），跑完共四步：还原 → 构建 → 自包含发布 → 生成安装器后整体替换 out
 3. 产物统一输出到 **`out` 文件夹**（对齐其它项目交付口径，只出安装器）：
    - `out\TaoZip-1.0-x64.msi` —— 微信风格简洁安装器：欢迎 → 选目录 → 安装，三步即完；桌面+开始菜单快捷方式自动创建；默认装到 D:\Program Files\TaoZip（界面可改），可在"应用和功能"里卸载（打包工具已内置包中，全程离线）
+   - 安装器运行时新标准（2026-11-21）：安装包不内置 .NET 运行时；安装时以系统实际注册为准全盘检测 .NET 10 桌面运行时（含其他 Tao 系软件装过的），有则零下载直接用；无则联网下载官方运行时装进系统统一目录 `C:\Program Files\dotnet`，与现有版本同处一地；无网且无运行时给通俗重试指引
    - 免安装绿色版：发布目录（publish 文件夹）里的 `TaoZip.exe` 即绿色版，不再单独拷出，互不干扰
    - 注：.msi 由 Windows 侧生成（依赖系统安装器组件），沙箱内已验证 WiX 配置语法与工具链安装
 

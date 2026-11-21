@@ -30,5 +30,13 @@ if ($code -notin 0, 3010) {
         Write-Host "---- $LogPath 尾部 100 行 ----"
         Get-Content $LogPath -Tail 100
     }
+    # 运行时保障日志 (机器级固定路径): 自定义动作成败的第一手证据, 失败时一并落盘
+    $rtLog = Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log'
+    if (Test-Path $rtLog) {
+        Write-Host "---- $rtLog 全文 ----"
+        Get-Content $rtLog
+    } else {
+        Write-Host "运行时保障日志不存在: $rtLog (自定义动作可能未执行到写日志处)"
+    }
     throw "msiexec 失败 exit=$code ($MsiArgs)"
 }

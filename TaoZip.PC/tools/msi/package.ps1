@@ -111,7 +111,8 @@ $wxs = @"
     <CustomAction Id="KillRunningTaoZip" Property="KILLCMD"
                   ExeCommand="/f /im TaoZip.exe"
                   Execute="immediate" Return="ignore" />
-    <CustomAction Id="SetRtEnsureCmd" Property="RTENSURECMD" Value="[SystemFolder]WindowsPowerShell\v1.0\powershell.exe" />
+    <!-- 64 位 PowerShell (System64Folder): 32 位 PS 下 ProgramFiles/注册表被重定向, 运行时检测会漏检 (run 44875970874 实锤) -->
+    <CustomAction Id="SetRtEnsureCmd" Property="RTENSURECMD" Value="[System64Folder]WindowsPowerShell\v1.0\powershell.exe" />
     <!-- 运行时保障: 装完文件后检测/补装 .NET 桌面运行时 (卸载 REMOVE 时跳过); 失败即回滚, 无网时脚本弹通俗重试指引 -->
     <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD"
                   ExeCommand="-NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot;"

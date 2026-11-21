@@ -27,7 +27,11 @@ $shellext = $shellextCandidates | Where-Object { Test-Path $_ } | Select-Object 
 if (-not $shellext) {
     throw "发布目录与常见编译路径均未找到 TaoZipShellext.dll (请先编译 native/TaoZip.ShellExt)"
 }
-Copy-Item $shellext (Join-Path $publishRoot 'TaoZipShellext.dll') -Force
+# 二次打包 (升级安装摊复用同一发布目录) 时源即目标, 跳过复制防 "Cannot overwrite with itself" (run 44884126934 实锤)
+$shellextDest = Join-Path $publishRoot 'TaoZipShellext.dll'
+if ([System.IO.Path]::GetFullPath($shellext) -ne [System.IO.Path]::GetFullPath($shellextDest)) {
+    Copy-Item $shellext $shellextDest -Force
+}
 $publishRootEsc = [System.Security.SecurityElement]::Escape($publishRoot)
 
 # ---- 全系安装器运行时新标准 (2026-11-21 老板令): 安装包不内置 .NET 运行时 ----

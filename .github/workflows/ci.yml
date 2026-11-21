@@ -342,6 +342,18 @@ jobs:
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if ($unins) { throw "卸载后卸载登记仍在" }
           if (Test-Path 'D:\Program Files\TaoZip') { throw "卸载后安装目录仍在" }
+          Write-Host "assert: registry clean after uninstall"
+          if (Get-Item 'HKLM:\SOFTWARE\Classes\TaoZip.Archive' -ErrorAction SilentlyContinue) { throw "卸载后 ProgId 仍在" }
+          if (Get-Item 'HKLM:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract' -ErrorAction SilentlyContinue) { throw "卸载后右键解压登记仍在" }
+          if (Get-Item -LiteralPath 'HKLM:\SOFTWARE\Classes\*\shell\TaoZip.Compress' -ErrorAction SilentlyContinue) { throw "卸载后右键压缩登记仍在" }
+          if (Get-Item -LiteralPath 'HKLM:\SOFTWARE\Classes\Directory\shell\TaoZip.Compress' -ErrorAction SilentlyContinue) { throw "卸载后文件夹压缩登记仍在" }
+          $owp = Get-ItemProperty 'HKLM:\SOFTWARE\Classes\.zip' -Name 'OpenWithProgids' -ErrorAction SilentlyContinue
+          if ($owp) { throw "卸载后 .zip OpenWithProgids 仍在" }
+          if (Get-Item 'HKCU:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract' -ErrorAction SilentlyContinue) { throw "卸载后用户级右键解压键仍在" }
+          if (Get-Item -LiteralPath 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress' -ErrorAction SilentlyContinue) { throw "卸载后用户级右键压缩键仍在" }
+          if (Get-Item 'HKCU:\SOFTWARE\Classes\TaoZip.Archive' -ErrorAction SilentlyContinue) { throw "卸载后用户级默认关联键仍在" }
+          if (Get-Item 'HKCU:\SOFTWARE\TaoZip\FileAssocBackup' -ErrorAction SilentlyContinue) { throw "卸载后用户级还原备份仍在" }
+          "uninstall-registry-clean: ok" | Out-File evidence\msi-facts.txt -Append
           "uninstall: ok" | Out-File evidence\msi-facts.txt -Append
       - name: 重装 + 装后视觉（启动/进程/截图）
         shell: pwsh

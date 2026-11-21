@@ -261,7 +261,7 @@ $wxs = @"
         <RemoveFolder Id="RemoveMenuDir" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\Tao\TaoZip" Name="MenuShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
-      <!-- 用户级旧右键键清理: 装时清掉残留 (新键不被旧键遮蔽), 卸载时清掉应用运行时写的键 (卸载即干净) -->
+      <!-- 用户级旧右键键清理: 仅卸载时清 (装时清会抹掉用户勾选的关联, 老板真机实锤 2026-11-21); 卸载时清掉应用运行时写的键 (卸载即干净) -->
       <Component Directory="INSTALLFOLDER" Guid="C4D8E9F5-7A9B-4C1D-8E3F-2B4C5D6E7F80">
         <RegistryValue Root="HKCU" Key="Software\Tao\TaoZip" Name="HkcuAssocCleanup" Type="integer" Value="1" KeyPath="yes" />
         $hkcuCleanup
@@ -276,14 +276,14 @@ $wxs = @"
           <RegistryKey Key="DefaultIcon"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot;,0" /></RegistryKey>
           <RegistryKey Key="shell\open\command"><RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]TaoZip.exe&quot; &quot;%1&quot;" /></RegistryKey>
         </RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.zip"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.7z"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.rar"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.tar"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.gz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.tgz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.bz2"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
-        <RegistryKey Root="HKLM" Key="Software\Classes\.xz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.zip" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.zip"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.7z" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.7z"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.rar" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.rar"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.tar" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.tar"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.gz" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.gz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.tgz" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.tgz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.bz2" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.bz2"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
+        <RemoveRegistryValue Root="HKLM" Key="Software\Classes\.xz" Name="OpenWithProgids" Action="removeOnUninstall" /><RegistryKey Root="HKLM" Key="Software\Classes\.xz"><RegistryValue Name="OpenWithProgids" Type="string" Value="TaoZip.Archive" /></RegistryKey>
       </Component>
     </Feature>
 

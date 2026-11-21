@@ -273,16 +273,40 @@ jobs:
           $lines = Get-Content $log
           if (-not ($lines | Where-Object { $_ -match 'runtime-present zero-download' })) { throw "首装未走零下载路: $($lines -join '; ')" }
           "runtime-path-natural: ok" | Out-File evidence\msi-facts.txt -Append
+      - name: 模拟用户级关联（老板真机实锤场景：用户在应用设置里勾选的关联写在 HKCU）
+        shell: pwsh
+        run: |
+          # 应用运行时写 HKCU 同名键: 右键解压/压缩、默认关联、还原备份
+          New-Item -Path 'HKCU:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -Force | Out-Null
+          Set-ItemProperty -Path 'HKCU:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -Name '(default)' -Value '"D:\Program Files\TaoZip\TaoZip.exe" --extract "%1"'
+          New-Item -LiteralPath 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -Force | Out-Null
+          Set-ItemProperty -LiteralPath 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -Name '(default)' -Value '"D:\Program Files\TaoZip\TaoZip.exe" --compress "%1"'
+          New-Item -Path 'HKCU:\SOFTWARE\Classes\TaoZip.Archive' -Force | Out-Null
+          Set-ItemProperty -Path 'HKCU:\SOFTWARE\Classes\TaoZip.Archive' -Name '(default)' -Value 'TaoZip Archive'
+          New-Item -Path 'HKCU:\SOFTWARE\TaoZip\FileAssocBackup' -Force | Out-Null
+          Set-ItemProperty -Path 'HKCU:\SOFTWARE\TaoZip\FileAssocBackup' -Name '.zip' -Value 'TaoZip.Archive'
+          Write-Host "simulate: user-level assoc written"
+          "simulate-user-assoc: ok" | Out-File evidence\msi-facts.txt -Append
       - name: 覆盖安装（同版本 AllowSameVersionUpgrades）
         shell: pwsh
         run: |
           $msi = (Get-Item out\*.msi).FullName
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\cover.log" -LogPath out\cover.log
           "cover-install: ok" | Out-File evidence\msi-facts.txt -Append
-      - name: 升级安装（1.0.9 覆盖走 MajorUpgrade）
+          Write-Host "assert: user-level assoc survives cover-install"
+          $k1 = Get-Item 'HKCU:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -ErrorAction SilentlyContinue
+          if (-not $k1) { throw "覆盖安装后用户级右键解压键被清（关联全没了根因复现）" }
+          $k2 = Get-Item -LiteralPath 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -ErrorAction SilentlyContinue
+          if (-not $k2) { throw "覆盖安装后用户级右键压缩键被清（关联全没了根因复现）" }
+          $k3 = Get-Item 'HKCU:\SOFTWARE\Classes\TaoZip.Archive' -ErrorAction SilentlyContinue
+          if (-not $k3) { throw "覆盖安装后用户级默认关联键被清（关联全没了根因复现）" }
+          $k4 = Get-Item 'HKCU:\SOFTWARE\TaoZip\FileAssocBackup' -ErrorAction SilentlyContinue
+          if (-not $k4) { throw "覆盖安装后用户级还原备份被清（关联全没了根因复现）" }
+          "cover-user-assoc: ok" | Out-File evidence\msi-facts.txt -Append
+      - name: 升级安装（1.0.10 覆盖走 MajorUpgrade）
         shell: pwsh
         run: |
-          $env:TAOZIP_PKG_VERSION = '1.0.9'
+          $env:TAOZIP_PKG_VERSION = '1.0.10'
           ./TaoZip.PC/tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out-upgrade
           $msi = (Get-Item out-upgrade\*.msi).FullName
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\upgrade.log" -LogPath out\upgrade.log
@@ -290,9 +314,24 @@ jobs:
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "升级后没有卸载登记" }
-          # 注册表 DisplayVersion 是四段式 1.0.9.0, 按前缀比对 (run 44884723523 实锤: 升级成功, 断言口径过严)
-          if ($unins.GetValue('DisplayVersion') -notlike '1.0.9*') { throw "升级后版本不是 1.0.9: $($unins.GetValue('DisplayVersion'))" }
+          # 注册表 DisplayVersion 是四段式 1.0.10.0, 按前缀比对 (run 44884723523 实锤: 升级成功, 断言口径过严)
+          if ($unins.GetValue('DisplayVersion') -notlike '1.0.10*') { throw "升级后版本不是 1.0.10: $($unins.GetValue('DisplayVersion'))" }
           "upgrade: ok -> $($unins.GetValue('DisplayVersion'))" | Out-File evidence\msi-facts.txt -Append
+          Write-Host "assert: user-level assoc survives upgrade"
+          $k1 = Get-Item 'HKCU:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -ErrorAction SilentlyContinue
+          if (-not $k1) { throw "升级后用户级右键解压键被清（关联全没了根因复现）" }
+          $k2 = Get-Item -LiteralPath 'HKCU:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -ErrorAction SilentlyContinue
+          if (-not $k2) { throw "升级后用户级右键压缩键被清（关联全没了根因复现）" }
+          $k3 = Get-Item 'HKCU:\SOFTWARE\Classes\TaoZip.Archive' -ErrorAction SilentlyContinue
+          if (-not $k3) { throw "升级后用户级默认关联键被清（关联全没了根因复现）" }
+          $k4 = Get-Item 'HKCU:\SOFTWARE\TaoZip\FileAssocBackup' -ErrorAction SilentlyContinue
+          if (-not $k4) { throw "升级后用户级还原备份被清（关联全没了根因复现）" }
+          Write-Host "assert: system-level assoc still present after upgrade"
+          $h1 = Get-Item 'HKLM:\SOFTWARE\Classes\SystemFileAssociations\.zip\shell\TaoZip.Extract\command' -ErrorAction SilentlyContinue
+          if (-not $h1) { throw "升级后系统级右键解压登记缺失" }
+          $h2 = Get-Item -LiteralPath 'HKLM:\SOFTWARE\Classes\*\shell\TaoZip.Compress\command' -ErrorAction SilentlyContinue
+          if (-not $h2) { throw "升级后系统级右键压缩登记缺失" }
+          "upgrade-user-assoc: ok" | Out-File evidence\msi-facts.txt -Append
       - name: 卸载后核验（登记清空+目录清除）
         shell: pwsh
         run: |

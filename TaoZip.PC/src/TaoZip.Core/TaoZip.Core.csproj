@@ -9,8 +9,8 @@
     <Company>Tao</Company>
     <Authors>Tao</Authors>
     <Copyright>Copyright (c) 2026 Tao</Copyright>
-    <Version>1.0.9</Version>
-    <InformationalVersion>1.0.9</InformationalVersion>
+    <Version>1.0.10</Version>
+    <InformationalVersion>1.0.10</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SharpCompress" Version="0.50.7" />

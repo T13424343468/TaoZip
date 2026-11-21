@@ -7,8 +7,8 @@ param(
     [string]$OutDir = "out"
 )
 $ScriptVersion = "v95-1121"
-# 云测升级链可传 TAOZIP_PKG_VERSION 覆盖 MSI 版本号 (如 1.0.9 走 MajorUpgrade); 默认随包版本
-$PkgVersion = if ($env:TAOZIP_PKG_VERSION) { $env:TAOZIP_PKG_VERSION } else { "1.0.9" }
+# 云测升级链可传 TAOZIP_PKG_VERSION 覆盖 MSI 版本号 (如 1.0.10 走 MajorUpgrade); 默认随包版本
+$PkgVersion = if ($env:TAOZIP_PKG_VERSION) { $env:TAOZIP_PKG_VERSION } else { "1.0.10" }
 Write-Host "打包脚本版本: $ScriptVersion (若日志无此行, 说明运行的是旧脚本, 请全新目录解压重试)"
 $ErrorActionPreference = 'Stop'
 $publishRoot = (Resolve-Path $PublishDir).Path
@@ -71,9 +71,11 @@ function Get-DirXml($node, [string]$prefix) {
 }
 $dirDefs = Get-DirXml $tree ""
 
-# ---- 用户级旧右键键清理: 应用运行时写 HKCU 同名键, 卸载清不到会残留并遮蔽系统级新键 ----
-# 装时清 (removeOnInstall, 旧键不再遮蔽新键) + 卸载时清 (removeOnUninstall, 卸载即干净)
-# 万物各有其名: 同一键的装/卸两条登记必须各立其名, 同名即冲突 (真机 WIX0091 教训)
+# ---- 用户级旧右键键清理: 仅卸载时清 (removeOnUninstall), 装时不再清 ----
+# 老板真机实锤 (2026-11-21): 装时清 (removeOnInstall) 会把用户在应用设置里勾选的关联与右键菜单
+# (应用运行时写在 HKCU 的同名键, 含默认关联与还原备份) 整个抹掉, 装完"关联全没了"。
+# 残留遮蔽问题由应用启动自愈兜底 (FileAssoc.RepairStaleCommands: 旧键指向已删 exe 时改写为当前程序),
+# 安装器不再抢这件事。万物各有其名: 同一键的卸载登记各立其名, 同名即冲突 (真机 WIX0091 教训)
 $hkcuStaleKeys = @(
     (0..7 | ForEach-Object { "Software\Classes\SystemFileAssociations\$(@('.zip','.7z','.rar','.tar','.gz','.tgz','.bz2','.xz')[$_])\shell\TaoZip.Extract" })
     "Software\Classes\*\shell\TaoZip.Compress"
@@ -85,7 +87,6 @@ $hkcuCleanup = ""
 $i = 0
 foreach ($k in $hkcuStaleKeys) {
     $i++
-    $hkcuCleanup += "<RemoveRegistryKey Id=`"HkcuCleanInstall$i`" Root=`"HKCU`" Key=`"$k`" Action=`"removeOnInstall`" />"
     $hkcuCleanup += "<RemoveRegistryKey Id=`"HkcuCleanUninstall$i`" Root=`"HKCU`" Key=`"$k`" Action=`"removeOnUninstall`" />"
 }
 

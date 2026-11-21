@@ -118,7 +118,9 @@ $wxs = @"
     <!-- cmd 包一层: 原生 exe 启动可靠 (taskkill 实证), 且把 PS 的报错重定向落盘, 1721/1722 都能拿到第一手输出 -->
     <SetProperty Id="RTENSURECMD" After="InstallFiles" Sequence="execute"
                  Value="[System64Folder]cmd.exe /c mkdir &quot;[CommonAppDataFolder]TaoZip&quot; 2&gt;nul &amp; &quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot; &gt;&gt; &quot;[CommonAppDataFolder]TaoZip\ca-out.txt&quot; 2&gt;&amp;1" />
-    <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD" Execute="deferred" Return="check" Impersonate="yes" ExeCommand="" />
+    <!-- Impersonate=no: 模拟用户的 deferred CA 在云台 CreateProcess 直接 1721 (run 44879456718 实锤, cmd.exe 都起不来,
+         ca-out.txt 未生成 = 进程从未启动); 改 SYSTEM 上下文跑, 机器级装运行时本就该 SYSTEM 权限 -->
+    <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD" Execute="deferred" Return="check" Impersonate="no" ExeCommand="" />
     <InstallExecuteSequence>
       <Custom Action="SetKillCmd" After="InstallValidate" />
       <Custom Action="KillRunningTaoZip" After="SetKillCmd" />

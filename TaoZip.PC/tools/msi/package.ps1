@@ -127,7 +127,7 @@ $wxs = @"
                  Value="[System64Folder]cmd.exe" />
     <!-- Impersonate=no: SYSTEM 上下文跑, 机器级装运行时本就该 SYSTEM 权限; cmd 包一层把 PS 报错重定向落盘拿第一手输出 -->
     <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD" Execute="deferred" Return="check" Impersonate="no"
-                  ExeCommand="/c mkdir &quot;[CommonAppDataFolder]TaoZip&quot; 2&gt;nul &amp; &quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot; &gt;&gt; &quot;[CommonAppDataFolder]TaoZip\ca-out.txt&quot; 2&gt;&amp;1" />
+                  ExeCommand="/c mkdir &quot;[CommonAppDataFolder]TaoZip&quot; 2&gt;nul &amp; set &quot;TAOZIP_FORCE_RUNTIME_DOWNLOAD=[TAOZIPFORCE]&quot; &amp; &quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot; &gt;&gt; &quot;[CommonAppDataFolder]TaoZip\ca-out.txt&quot; 2&gt;&amp;1" />
     <InstallExecuteSequence>
       <Custom Action="SetKillCmd" After="InstallValidate" />
       <Custom Action="KillRunningTaoZip" After="SetKillCmd" />
@@ -136,6 +136,9 @@ $wxs = @"
     <MediaTemplate EmbedCab="yes" />
     <!-- 卸载列表图标：设置-应用/软件管理里显示 TaoZip 自己的图标；源按发布根目录 app.ico（csproj 已固定拷到根） -->
     <Icon Id="TaoZipIco" SourceFile="$publishRoot\app.ico" />
+    <!-- 云测钩子属性: 断言二强制走下载路。环境变量传不进 msiexec 服务上下文 (run 44885229031 实锤),
+         改走 MSI 公共属性: msiexec /i xxx.msi TAOZIPFORCE=1; Secure=yes 保证提升执行侧可读 -->
+    <Property Id="TAOZIPFORCE" Value="" Secure="yes" />
     <Property Id="ARPPRODUCTICON" Value="TaoZipIco" />
     <Property Id="ARPNOREPAIR" Value="1" />
     <Property Id="DESKTOP_SHORTCUT" Value="1" />

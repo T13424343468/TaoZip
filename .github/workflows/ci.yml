@@ -328,14 +328,13 @@ jobs:
           # 新标准断言二: 强制走下载路, 官方运行时装进系统统一 .NET 目录后装齐
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/x `"$((Get-Item out-upgrade\*.msi).FullName)`" /qn" -LogPath out\uninstall2.log
           Remove-Item (Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log') -Force -ErrorAction SilentlyContinue
-          $env:TAOZIP_FORCE_RUNTIME_DOWNLOAD = '1'
-          ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$((Get-Item out-upgrade\*.msi).FullName)`" /qn /l*v out\forced-runtime.log" -LogPath out\forced-runtime.log
+          # 强制下载路开关走 MSI 公共属性 TAOZIPFORCE=1: 环境变量传不进 msiexec 服务上下文 (run 44885229031 实锤)
+          ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$((Get-Item out-upgrade\*.msi).FullName)`" TAOZIPFORCE=1 /qn /l*v out\forced-runtime.log" -LogPath out\forced-runtime.log
           $log = Join-Path $env:ProgramData 'TaoZip\taozip-runtime.log'
           if (-not (Test-Path $log)) { throw "运行时保障日志缺失: $log" }
           $lines = Get-Content $log
           if (-not ($lines | Where-Object { $_ -match 'runtime-download-install ok' })) { throw "强制下载路未装齐: $($lines -join '; ')" }
           "runtime-path-forced: ok" | Out-File evidence\msi-facts.txt -Append
-          $env:TAOZIP_FORCE_RUNTIME_DOWNLOAD = $null
       - name: 存档安装链证据
         if: always()
         uses: actions/upload-artifact@v4

@@ -204,6 +204,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: 配置 C++ 工具集（原生 DLL 随包携带）
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: 编译原生 DLL（资源管理器按钮, 随包携带）
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "未找到含 C++ 工具集的 Visual Studio" }
+          $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+          & $msbuild TaoZip.PC/src/TaoZip.ShellExt/TaoZipShellext.vcxproj -p:Configuration=Release -p:Platform=x64 -m -warnAsError
+          if ($LASTEXITCODE -ne 0) { throw "原生 DLL 编译失败" }
       - name: 安装 WiX 打包工具
         shell: pwsh
         run: |
@@ -223,7 +235,7 @@ jobs:
           "PUBDIR=$($pub.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: MSI 打包（微信风格自绘向导）
         shell: pwsh
-        run: ./tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out
+        run: ./TaoZip.PC/tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out
       - name: 安装包外观核验（体积/版本/图标源）
         shell: pwsh
         run: |
@@ -266,7 +278,7 @@ jobs:
         shell: pwsh
         run: |
           $env:TAOZIP_PKG_VERSION = '1.0.9'
-          ./tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out-upgrade
+          ./TaoZip.PC/tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out-upgrade
           $msi = (Get-Item out-upgrade\*.msi).FullName
           ./tools/msi/invoke-msi.ps1 -MsiArgs "/i `"$msi`" /qn /l*v out\upgrade.log" -LogPath out\upgrade.log
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
@@ -335,6 +347,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: 配置 C++ 工具集（原生 DLL 随包携带）
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: 编译原生 DLL（资源管理器按钮, 随包携带）
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "未找到含 C++ 工具集的 Visual Studio" }
+          $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+          & $msbuild TaoZip.PC/src/TaoZip.ShellExt/TaoZipShellext.vcxproj -p:Configuration=Release -p:Platform=x64 -m -warnAsError
+          if ($LASTEXITCODE -ne 0) { throw "原生 DLL 编译失败" }
       - name: 安装 WiX 打包工具
         shell: pwsh
         run: |
@@ -354,7 +378,7 @@ jobs:
           "PUBDIR=$($pub.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: MSI 打包（微信风格自绘向导）
         shell: pwsh
-        run: ./tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out
+        run: ./TaoZip.PC/tools/msi/package.ps1 -PublishDir $env:PUBDIR -OutDir out
       - name: 直出核验（体积/唯一性）
         shell: pwsh
         run: |

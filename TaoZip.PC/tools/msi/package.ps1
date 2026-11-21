@@ -115,8 +115,9 @@ $wxs = @"
          必须是 deferred: immediate CA 在 InstallFinalize 落盘脚本执行前跑, EnsureRuntime.ps1 还没装到盘上,
          powershell -File 找不到文件秒退 -196608 (run 44877397577 实锤); deferred 排在 InstallFiles 后即落盘后执行。
          64 位 PowerShell (System64Folder): 32 位 PS 下 ProgramFiles/注册表被重定向, 检测会漏检 (run 44875970874 实锤) -->
+    <!-- cmd 包一层: 原生 exe 启动可靠 (taskkill 实证), 且把 PS 的报错重定向落盘, 1721/1722 都能拿到第一手输出 -->
     <SetProperty Id="RTENSURECMD" After="InstallFiles" Sequence="execute"
-                 Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot;" />
+                 Value="[System64Folder]cmd.exe /c mkdir &quot;[CommonAppDataFolder]TaoZip&quot; 2&gt;nul &amp; &quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot; &gt;&gt; &quot;[CommonAppDataFolder]TaoZip\ca-out.txt&quot; 2&gt;&amp;1" />
     <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD" Execute="deferred" Return="check" Impersonate="yes" ExeCommand="" />
     <InstallExecuteSequence>
       <Custom Action="SetKillCmd" After="InstallValidate" />

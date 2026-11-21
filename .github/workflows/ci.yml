@@ -290,7 +290,8 @@ jobs:
           $unins = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
                    Where-Object { $_.GetValue('DisplayName') -eq 'TaoZip' }
           if (-not $unins) { throw "升级后没有卸载登记" }
-          if ($unins.GetValue('DisplayVersion') -ne '1.0.9') { throw "升级后版本不是 1.0.9: $($unins.GetValue('DisplayVersion'))" }
+          # 注册表 DisplayVersion 是四段式 1.0.9.0, 按前缀比对 (run 44884723523 实锤: 升级成功, 断言口径过严)
+          if ($unins.GetValue('DisplayVersion') -notlike '1.0.9*') { throw "升级后版本不是 1.0.9: $($unins.GetValue('DisplayVersion'))" }
           "upgrade: ok -> $($unins.GetValue('DisplayVersion'))" | Out-File evidence\msi-facts.txt -Append
       - name: 卸载后核验（登记清空+目录清除）
         shell: pwsh

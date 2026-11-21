@@ -67,8 +67,15 @@ try {
     }
 }
 Write-RtLog 'download-ok, installing official runtime into system dotnet dir'
-& $dnScript -Runtime windowsdesktop -Channel 10.0 -InstallDir 'C:\Program Files\dotnet'
-if ($LASTEXITCODE -ne 0) { Write-RtLog ("dotnet-install exit " + $LASTEXITCODE); exit $LASTEXITCODE }
+# dotnet-install.ps1 成功时不设退出码, $LASTEXITCODE 会是 null (run 44886957984 实锤误判);
+#   以 try/catch + 装后实测为准
+try {
+    & $dnScript -Runtime windowsdesktop -Channel 10.0 -InstallDir 'C:\Program Files\dotnet'
+    Write-RtLog 'dotnet-install script returned'
+} catch {
+    Write-RtLog ("dotnet-install failed " + $_.Exception.Message)
+    exit 31338
+}
 if (-not (Test-DesktopRuntime10)) { Write-RtLog 'verify-failed'; exit 31337 }
 Write-RtLog 'runtime-download-install ok'
 exit 0

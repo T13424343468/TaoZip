@@ -26,6 +26,8 @@ public sealed partial class ExtractWindow : Window
         InitializeComponent();
         AppWindow.Title = "TaoZip 解压中";
         AppIcon.Apply(AppWindow);
+        // v95 修红: 首帧直涂主题底色, 不等 ThemeResource 重估, 杜绝刚出现一瞬的主题残留
+        ThemeService.PaintRootBackground(this);
         ThemeService.PinSubTitleBar(this);
         var winSize = new Windows.Graphics.SizeInt32();
         winSize.Width = 500;

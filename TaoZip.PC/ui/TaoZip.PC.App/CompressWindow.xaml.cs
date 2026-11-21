@@ -32,6 +32,8 @@ public sealed partial class CompressWindow : Window
         InitializeComponent();
         AppWindow.Title = "TaoZip 压缩";
         AppIcon.Apply(AppWindow);
+        // v95 修红: 与解压窗同型——首帧直涂主题底色, 不等 ThemeResource 重估
+        ThemeService.PaintRootBackground(this);
         ThemeService.PinSubTitleBar(this);
         var winSize = new Windows.Graphics.SizeInt32();
         winSize.Width = 530;

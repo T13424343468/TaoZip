@@ -165,6 +165,7 @@ namespace Microsoft.UI.Xaml.Controls
             new System.Collections.Generic.List<UIElement>();
         public new double ActualWidth => 0;
         public new double ActualHeight => 0;
+        public Microsoft.UI.Xaml.Media.Brush? Background { get; set; }
     }
     public enum Orientation { Horizontal, Vertical }
     public class StackPanel : Panel

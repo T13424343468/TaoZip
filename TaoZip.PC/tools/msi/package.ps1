@@ -6,7 +6,9 @@ param(
     [Parameter(Mandatory = $true)][string]$PublishDir,
     [string]$OutDir = "out"
 )
-$ScriptVersion = "v94-1115"
+$ScriptVersion = "v95-1121"
+# 云测升级链可传 TAOZIP_PKG_VERSION 覆盖 MSI 版本号 (如 1.0.9 走 MajorUpgrade); 默认随包版本
+$PkgVersion = if ($env:TAOZIP_PKG_VERSION) { $env:TAOZIP_PKG_VERSION } else { "1.0.8" }
 Write-Host "打包脚本版本: $ScriptVersion (若日志无此行, 说明运行的是旧脚本, 请全新目录解压重试)"
 $ErrorActionPreference = 'Stop'
 $publishRoot = (Resolve-Path $PublishDir).Path
@@ -26,6 +28,13 @@ if (-not $shellext) {
     throw "发布目录与常见编译路径均未找到 TaoZipShellext.dll (请先编译 native/TaoZip.ShellExt)"
 }
 Copy-Item $shellext (Join-Path $publishRoot 'TaoZipShellext.dll') -Force
+
+# ---- 全系安装器运行时新标准 (2026-11-21 老板令): 安装包不内置 .NET 运行时 ----
+# 安装期由 EnsureRuntime.ps1 以系统实际注册为准检测所需运行时: 有则零下载直接用;
+# 无则联网下载官方运行时并显示进度, 装进系统统一 .NET 目录; 无网且无运行时给通俗重试指引。
+$rtSrc = Join-Path $PSScriptRoot 'EnsureRuntime.ps1'
+if (-not (Test-Path $rtSrc)) { throw "运行时保障脚本缺失: $rtSrc (请使用完整包)" }
+Copy-Item $rtSrc (Join-Path $publishRoot 'EnsureRuntime.ps1') -Force
 
 # ---- 枚举发布文件: 目录树(支持多级) + 组件清单 ----
 $allFiles = Get-ChildItem -Path $publishRoot -Recurse -File
@@ -87,7 +96,7 @@ foreach ($f in $allFiles) {
 
 $wxs = @"
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package Codepage="936" Name="TaoZip" Manufacturer="Tao" Version="1.0.7.0"
+  <Package Codepage="936" Name="TaoZip" Manufacturer="Tao" Version="$PkgVersion.0"
            UpgradeCode="B7A3C9D2-4E5F-4A6B-8C1D-2F3E4A5B6C7D" Scope="perMachine" Compressed="yes">
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="已安装了更新版本的 TaoZip，如需重装请先在“应用”中卸载。" AllowSameVersionUpgrades="yes" />
     <!-- 默认装 D 盘 (D:\Program Files\TaoZip, 界面可改): 与 TaoPad 相同的"目录同名属性覆盖"写法,
@@ -100,9 +109,16 @@ $wxs = @"
     <CustomAction Id="KillRunningTaoZip" Property="KILLCMD"
                   ExeCommand="/f /im TaoZip.exe"
                   Execute="immediate" Return="ignore" />
+    <CustomAction Id="SetRtEnsureCmd" Property="RTENSURECMD" Value="[SystemFolder]WindowsPowerShell\v1.0\powershell.exe" />
+    <!-- 运行时保障: 装完文件后检测/补装 .NET 桌面运行时 (卸载 REMOVE 时跳过); 失败即回滚, 无网时脚本弹通俗重试指引 -->
+    <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD"
+                  ExeCommand="-NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot;"
+                  Execute="immediate" Return="check" />
     <InstallExecuteSequence>
       <Custom Action="SetKillCmd" After="InstallValidate" />
       <Custom Action="KillRunningTaoZip" After="SetKillCmd" />
+      <Custom Action="SetRtEnsureCmd" After="InstallFiles" />
+      <Custom Action="EnsureDotNetRuntime" After="SetRtEnsureCmd" Condition="NOT REMOVE" />
     </InstallExecuteSequence>
     <MediaTemplate EmbedCab="yes" />
     <!-- 卸载列表图标：设置-应用/软件管理里显示 TaoZip 自己的图标；源按发布根目录 app.ico（csproj 已固定拷到根） -->
@@ -357,12 +373,12 @@ $wxsPath = Join-Path $env:TEMP "TaoZip.Package.wxs"
 $wixExe = Join-Path $PSScriptRoot "wix\wix.exe"
 if (-not (Test-Path $wixExe)) { throw "包内打包工具缺失 ($wixExe)，请使用完整包重解压" }
 
-$msi = Join-Path $OutDir "TaoZip-1.0.7-x64.msi"
+$msi = Join-Path $OutDir "TaoZip-$PkgVersion-x64.msi"
 if (Test-Path $msi) { Remove-Item $msi -Force }
 Write-Host ("打包工具: " + (Get-Item $wixExe).Length + " bytes @ " + (Get-Item $wixExe).LastWriteTime)
 & $wixExe build $wxsPath -pdbtype none -o $msi 2>&1 | Tee-Object -FilePath (Join-Path $OutDir "msi-build.log")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "打包配置已保存: $wxsPath (排错用, 请把此文件与上方完整报错一并发出)"
-    throw "WiX 构建 msi 失败 (请确认本机已安装 .NET 8)"
+    throw "WiX 构建 msi 失败 (请确认本机已安装 .NET 10)"
 }
 Write-Host "安装器已生成: $msi"

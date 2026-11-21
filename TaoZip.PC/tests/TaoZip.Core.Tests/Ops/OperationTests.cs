@@ -156,7 +156,10 @@ public class OperationTests : IDisposable
             Assert.DoesNotContain("ThemeService.Apply", ReadUi(f));
             // v63: 子窗不另 Apply, 但标题栏须随象钉色 (内容浅/标题栏黑拼色之封锁)
             Assert.Contains("ThemeService.PinSubTitleBar(this)", ReadUi(f));
+            // v95 修红: 子窗首帧主题残留——构造期直涂主题底色键, 不依赖 ThemeResource 首帧重估
+            Assert.Contains("ThemeService.PaintRootBackground(this)", ReadUi(f));
         }
+        Assert.Contains("internal static void PaintRootBackground", theme);
         // 主窗仅两处合法入口: 启动钉基调 (v60, 深色系统开局全黑底之封锁) + 用户切换主题
         var main = ReadUi("MainWindow.xaml.cs");
         Assert.Equal(2, Regex.Matches(main, "ThemeService\\.Apply").Count);
@@ -392,8 +395,8 @@ public class OperationTests : IDisposable
         Assert.Contains("new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this)", extract);
         Assert.DoesNotContain("new TrayIcon(\"", compress);
         Assert.DoesNotContain("new TrayIcon(\"", extract);
-        // 版本推进: 1.0.7 (v94 出包版: 资源管理器动态按钮一期)
+        // 版本推进: 1.0.8 (v95 出包版: .NET 10 升级 + 解压小窗首帧主题残留修复)
         var csproj = File.ReadAllText(Path.Combine(_ui, "TaoZip.PC.App.csproj"));
-        Assert.Contains("<Version>1.0.7</Version>", csproj);
+        Assert.Contains("<Version>1.0.8</Version>", csproj);
     }
 }

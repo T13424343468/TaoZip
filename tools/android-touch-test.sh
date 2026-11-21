@@ -11,6 +11,16 @@ adb start-server
 adb wait-for-device
 adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 2; done'
 sleep 5
+# 禁动画接管 (run 43727139004 实锤: 动作自带禁动画在刚开机时 settings 服务 Broken pipe, exit 224)。
+# 带重试: 单条失败不致命, 三轮全失败才放弃 (动画不关只影响触控稳定性, 不影响功能判定)。
+for i in 1 2 3; do
+  ok=1
+  adb shell settings put global window_animation_scale 0.0 || ok=0
+  adb shell settings put global transition_animation_scale 0.0 || ok=0
+  adb shell settings put global animator_duration_scale 0.0 || ok=0
+  [ "$ok" = "1" ] && { echo "animations disabled (try $i)"; break; }
+  echo "animation disable retry $i"; sleep 3
+done
 adb install -r "$APK"
 # 首启「所有文件访问」预授权（真机由用户首次同意一次; 云台等价预置, 不替代任何功能触控）
 adb shell appops set com.taozip.app MANAGE_EXTERNAL_STORAGE allow 2>/dev/null || true

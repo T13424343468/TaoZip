@@ -243,6 +243,25 @@ public static class ThemeService
     }
 
     /// <summary>
+    /// v95 修红: 子窗首帧主题残留——ThemeResource 首帧重估不及时, 解压/压缩小窗刚出现
+    /// 一瞬露出系统默认底色。治法(TaoPad 同型教训): 构造期直涂主题底色键,
+    /// 不依赖 ThemeResource 重估; 资源未挂时退回 XAML 原样, 不影响主功能。
+    /// </summary>
+    internal static void PaintRootBackground(Window? window)
+    {
+        if (window?.Content is not Microsoft.UI.Xaml.Controls.Panel root) return;
+        try
+        {
+            if (Application.Current.Resources["ApplicationPageBackgroundThemeBrush"] is Microsoft.UI.Xaml.Media.Brush bg)
+                root.Background = bg;
+        }
+        catch
+        {
+            // 外观增强, 静默
+        }
+    }
+
+    /// <summary>
     /// 小窗按屏幕工作区居中 (v82 用户反馈: 小窗默认应落在屏幕中间, 系统默认位随缘)。
     /// 传窗口像素尺寸, 取主显示器工作区 (避开任务栏); 失败退回系统默认位, 静默。
     /// </summary>

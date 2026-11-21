@@ -38,7 +38,7 @@ internal static class ShellExtRegistration
     {
         if (!File.Exists(DllPath)) return; // 老包无 DLL, 不注册
 
-        var ver = typeof(ShellExtRegistration).Assembly.GetName().Version?.ToString(3) ?? "1.0.7";
+        var ver = typeof(ShellExtRegistration).Assembly.GetName().Version?.ToString(3) ?? "1.0.8";
         var manifestPath = WriteManifest(ver);
         var markerPath = Path.Combine(Path.GetDirectoryName(manifestPath)!, "ShellExtSparse.version");
         // 幂等: 同版本已注册过就不再碰 PackageManager (查询接口部分主机需提权, 用落盘标记替代)。

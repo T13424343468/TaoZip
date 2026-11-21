@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>TaoZip.PC.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -15,13 +15,13 @@
     <WindowsPackageType>None</WindowsPackageType>
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <AssemblyName>TaoZip</AssemblyName>
-    <Version>1.0.7</Version>
+    <Version>1.0.8</Version>
     <!-- 定板 1.00: 发布信息一律 Tao -->
     <Product>TaoZip</Product>
     <Company>Tao</Company>
     <Authors>Tao</Authors>
     <Copyright>Copyright (c) 2026 Tao</Copyright>
-    <InformationalVersion>1.0.7</InformationalVersion>
+    <InformationalVersion>1.0.8</InformationalVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>

@@ -69,6 +69,10 @@ public sealed partial class ExtractWindow : Window
         // 内容左缘被裁。激活后按界面实际缩放比例重定尺寸并居中。
         ApplyWindowSize();
         ThemeService.DiagnoseWindow(this, "解压窗");
+        // v96 修红: 激活后根板已实际渲染, 补一次直涂+钉色——启动即落定之外再加一道保险,
+        // 不依赖任何单一时序; 取色结果落盘 theme.log, 再白一眼定位。
+        ThemeService.PaintRootBackground(this);
+        ThemeService.PinSubTitleBar(this);
         SelfHealCheck();
     }
 

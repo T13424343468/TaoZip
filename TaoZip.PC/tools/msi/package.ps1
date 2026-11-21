@@ -8,7 +8,7 @@ param(
 )
 $ScriptVersion = "v95-1121"
 # 云测升级链可传 TAOZIP_PKG_VERSION 覆盖 MSI 版本号 (如 1.0.9 走 MajorUpgrade); 默认随包版本
-$PkgVersion = if ($env:TAOZIP_PKG_VERSION) { $env:TAOZIP_PKG_VERSION } else { "1.0.8" }
+$PkgVersion = if ($env:TAOZIP_PKG_VERSION) { $env:TAOZIP_PKG_VERSION } else { "1.0.9" }
 Write-Host "打包脚本版本: $ScriptVersion (若日志无此行, 说明运行的是旧脚本, 请全新目录解压重试)"
 $ErrorActionPreference = 'Stop'
 $publishRoot = (Resolve-Path $PublishDir).Path

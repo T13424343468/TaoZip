@@ -27,11 +27,25 @@ public static class ThemeService
     private static Window? _pendingWindow;
     private static int _pendingThemeId;
 
-    /// <summary>对窗口应用主题：三象字典互斥只挂当象，并钉基调与标题栏（万流不漏）。</summary>
-    public static void Apply(Window? window, int themeId)
+    /// <summary>当前已落定的主题编号（0 水墨默认），供首帧直涂回退时本地取色。</summary>
+    private static int _currentThemeId;
+
+    /// <summary>
+    /// 对窗口应用主题：三象字典互斥只挂当象，并钉基调与标题栏（万流不漏）。
+    /// v96 修红: 启动路径传 immediate=true 立即落定——真机实证墨夜下小窗整程白底,
+    /// 150ms 并档定时器让窗口先以系统默认白底现身, 主题落定前用户已看见白窗。
+    /// 启动只有一次 Apply 无连击可言, 立即落定不损并档语义; 运行期快切仍走并档。
+    /// </summary>
+    public static void Apply(Window? window, int themeId, bool immediate = false)
     {
         if (window is null)
         {
+            return;
+        }
+
+        if (immediate)
+        {
+            ApplyNow(window, themeId);
             return;
         }
 
@@ -72,6 +86,7 @@ public static class ThemeService
             return;
         }
 
+        _currentThemeId = themeId;
         try
         {
             var resources = Application.Current.Resources;
@@ -105,6 +120,9 @@ public static class ThemeService
                 }
                 LogApply(themeId, before, root.ActualTheme);
                 PinTitleBar(window, root);
+                // v96 修红: 字典挂好后立即直涂根板底色——此刻直接索引必能取到当象色,
+                // 不再依赖 ThemeResource 重估是否及时; 重估失效也不露系统白底。
+                PaintRootBackground(window);
             }
         }
         catch (Exception)
@@ -246,19 +264,49 @@ public static class ThemeService
     /// v95 修红: 子窗首帧主题残留——ThemeResource 首帧重估不及时, 解压/压缩小窗刚出现
     /// 一瞬露出系统默认底色。治法(TaoPad 同型教训): 构造期直涂主题底色键,
     /// 不依赖 ThemeResource 重估; 资源未挂时退回 XAML 原样, 不影响主功能。
+    /// v96 升级: 真机实证小窗整程白底——构造期字典未挂, 直涂两路全空转。
+    /// 改为双路取色: 应用级字典取不到时, 按当前已落定主题本地装字典取色,
+    /// 任何时序下都能涂上; 取色结果落盘 theme.log, 真机再白一眼定位。
     /// </summary>
     internal static void PaintRootBackground(Window? window)
     {
         if (window?.Content is not Microsoft.UI.Xaml.Controls.Panel root) return;
         try
         {
+            // 首选: 应用级已挂当象字典, 直接索引取色 (v79 定案: 应用级直接索引可取)
             if (Application.Current.Resources["ApplicationPageBackgroundThemeBrush"] is Microsoft.UI.Xaml.Media.Brush bg)
+            {
                 root.Background = bg;
+                LogPaint("应用级字典");
+                return;
+            }
+            // 回退: 字典未挂(构造期等) → 按当前主题本地装字典取色, 不依赖挂载时序
+            var source = _currentThemeId switch { 1 => SkySource, 2 => NightSource, _ => InkSource };
+            var local = new Microsoft.UI.Xaml.ResourceDictionary { Source = source };
+            if (local["ApplicationPageBackgroundThemeBrush"] is Microsoft.UI.Xaml.Media.Brush fallback)
+            {
+                root.Background = fallback;
+                LogPaint("本地字典回退");
+                return;
+            }
+            LogPaint("取色落空(两路都没取到)");
         }
-        catch
+        catch (Exception ex)
         {
-            // 外观增强, 静默
+            LogPaint($"直涂异常 {ex.GetType().Name} {ex.Message}");
         }
+    }
+
+    /// <summary>直涂结果落盘 (v96): 真机若再现白底, 一行日志定位是哪路取色失效。</summary>
+    private static void LogPaint(string outcome)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(TaoZip.Core.TaoPaths.DataDir("TaoZip"), "theme.log"),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} 首帧直涂: {outcome}\r\n");
+        }
+        catch { /* 诊断落盘失败静默 */ }
     }
 
     /// <summary>

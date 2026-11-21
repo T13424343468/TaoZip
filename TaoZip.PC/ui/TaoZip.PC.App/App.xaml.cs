@@ -67,7 +67,9 @@ public partial class App : Application
             ShellExtRegistration.RegisterIfReady();
         }
         // 主题: 水墨默认自带, 按上次选择应用到当前窗口 (Tao 系列主题)
-        ThemeService.Apply(_window, new ThemeStore(AppDir()).Load());
+        // v96 修红: 启动这一次立即落定, 不走 150ms 并档——窗口 Activate 前字典已挂、
+        // 底色已涂、标题栏已钉, 墨夜下小窗现身即近黑, 不再先白一拍 (真机实证整程白底)。
+        ThemeService.Apply(_window, new ThemeStore(AppDir()).Load(), immediate: true);
         _window.Activate();
     }
 

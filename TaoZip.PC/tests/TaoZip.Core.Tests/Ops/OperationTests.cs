@@ -395,8 +395,8 @@ public class OperationTests : IDisposable
         Assert.Contains("new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this)", extract);
         Assert.DoesNotContain("new TrayIcon(\"", compress);
         Assert.DoesNotContain("new TrayIcon(\"", extract);
-        // 版本推进: 1.0.8 (v95 出包版: .NET 10 升级 + 解压小窗首帧主题残留修复)
+        // 版本推进: 1.0.9 (v96 修红: 墨夜小窗整程白底根治——启动即落定+直涂双路取色)
         var csproj = File.ReadAllText(Path.Combine(_ui, "TaoZip.PC.App.csproj"));
-        Assert.Contains("<Version>1.0.8</Version>", csproj);
+        Assert.Contains("<Version>1.0.9</Version>", csproj);
     }
 }

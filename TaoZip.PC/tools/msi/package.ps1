@@ -138,7 +138,7 @@ $wxs = @"
     <Icon Id="TaoZipIco" SourceFile="$publishRoot\app.ico" />
     <!-- 云测钩子属性: 断言二强制走下载路。环境变量传不进 msiexec 服务上下文 (run 44885229031 实锤),
          改走 MSI 公共属性: msiexec /i xxx.msi TAOZIPFORCE=1; Secure=yes 保证提升执行侧可读 -->
-    <Property Id="TAOZIPFORCE" Value="" Secure="yes" />
+    <Property Id="TAOZIPFORCE" Secure="yes" />
     <Property Id="ARPPRODUCTICON" Value="TaoZipIco" />
     <Property Id="ARPNOREPAIR" Value="1" />
     <Property Id="DESKTOP_SHORTCUT" Value="1" />

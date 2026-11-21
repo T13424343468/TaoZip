@@ -71,7 +71,7 @@ function Get-DirXml($node, [string]$prefix) {
 }
 $dirDefs = Get-DirXml $tree ""
 
-# ---- 用户级旧右键键清理: 仅卸载时清 (removeOnUninstall), 装时不再清 ----
+# ---- 用户级旧右键键清理: 仅真卸载时清 (removeOnUninstall + NOT UPGRADINGPRODUCTCODE), 装时与升级均不清 ----
 # 老板真机实锤 (2026-11-21): 装时清 (removeOnInstall) 会把用户在应用设置里勾选的关联与右键菜单
 # (应用运行时写在 HKCU 的同名键, 含默认关联与还原备份) 整个抹掉, 装完"关联全没了"。
 # 残留遮蔽问题由应用启动自愈兜底 (FileAssoc.RepairStaleCommands: 旧键指向已删 exe 时改写为当前程序),
@@ -264,6 +264,9 @@ $wxs = @"
       <!-- 用户级旧右键键清理: 仅卸载时清 (装时清会抹掉用户勾选的关联, 老板真机实锤 2026-11-21); 卸载时清掉应用运行时写的键 (卸载即干净) -->
       <Component Directory="INSTALLFOLDER" Guid="C4D8E9F5-7A9B-4C1D-8E3F-2B4C5D6E7F80">
         <RegistryValue Root="HKCU" Key="Software\Tao\TaoZip" Name="HkcuAssocCleanup" Type="integer" Value="1" KeyPath="yes" />
+        <!-- 升级移除旧产品时跳过清理 (云测 run 44911538340 实锤: MajorUpgrade 卸载旧产品会执行本组件,
+             把用户勾选的 HKCU 关联键清掉, 与装时清同罪); 真卸载才清, 卸载即干净 -->
+        <Condition>NOT UPGRADINGPRODUCTCODE</Condition>
         $hkcuCleanup
       </Component>
     </Feature>

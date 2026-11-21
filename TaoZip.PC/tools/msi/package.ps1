@@ -111,17 +111,16 @@ $wxs = @"
     <CustomAction Id="KillRunningTaoZip" Property="KILLCMD"
                   ExeCommand="/f /im TaoZip.exe"
                   Execute="immediate" Return="ignore" />
-    <!-- 64 位 PowerShell (System64Folder): 32 位 PS 下 ProgramFiles/注册表被重定向, 运行时检测会漏检 (run 44875970874 实锤) -->
-    <CustomAction Id="SetRtEnsureCmd" Property="RTENSURECMD" Value="[System64Folder]WindowsPowerShell\v1.0\powershell.exe" />
-    <!-- 运行时保障: 装完文件后检测/补装 .NET 桌面运行时 (卸载 REMOVE 时跳过); 失败即回滚, 无网时脚本弹通俗重试指引 -->
-    <CustomAction Id="EnsureDotNetRuntime" Property="RTENSURECMD"
-                  ExeCommand="-NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot;"
-                  Execute="immediate" Return="check" />
+    <!-- 运行时保障: 装完文件后检测/补装 .NET 桌面运行时 (卸载 REMOVE 时跳过); 失败即回滚, 无网时脚本弹通俗重试指引。
+         必须是 deferred: immediate CA 在 InstallFinalize 落盘脚本执行前跑, EnsureRuntime.ps1 还没装到盘上,
+         powershell -File 找不到文件秒退 -196608 (run 44877397577 实锤); deferred 排在 InstallFiles 后即落盘后执行。
+         64 位 PowerShell (System64Folder): 32 位 PS 下 ProgramFiles/注册表被重定向, 检测会漏检 (run 44875970874 实锤) -->
+    <CustomAction Id="EnsureDotNetRuntime" Execute="deferred" Return="check" Impersonate="yes"
+                  ExeCommand="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]EnsureRuntime.ps1&quot;" />
     <InstallExecuteSequence>
       <Custom Action="SetKillCmd" After="InstallValidate" />
       <Custom Action="KillRunningTaoZip" After="SetKillCmd" />
-      <Custom Action="SetRtEnsureCmd" After="InstallFiles" />
-      <Custom Action="EnsureDotNetRuntime" After="SetRtEnsureCmd" Condition="NOT REMOVE" />
+      <Custom Action="EnsureDotNetRuntime" After="InstallFiles" Condition="NOT REMOVE" />
     </InstallExecuteSequence>
     <MediaTemplate EmbedCab="yes" />
     <!-- 卸载列表图标：设置-应用/软件管理里显示 TaoZip 自己的图标；源按发布根目录 app.ico（csproj 已固定拷到根） -->

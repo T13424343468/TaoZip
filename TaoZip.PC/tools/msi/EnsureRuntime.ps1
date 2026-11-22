@@ -78,4 +78,62 @@ try {
 }
 if (-not (Test-DesktopRuntime10)) { Write-RtLog 'verify-failed'; exit 31337 }
 Write-RtLog 'runtime-download-install ok'
+
+# ---- 2) VC++ 2015-2022 运行库 (2026-11-22 全系安装器标准补齐, 官方部署指南实锤:
+#      依赖框架的未打包应用以 VC++ 可再发行包为先决条件, 缺失则程序起不来) ----
+# 检测口径: 注册表 Runtimes\x64 Installed=1 (Registry64 视图, 32 位 PS 重定向坑同上) 或
+#   System32 下 vcruntime140.dll 与 msvcp140.dll 双双在位; 安装器静默参数 /install /quiet /norestart,
+#   退出码 1638=已有更新版本 (算在位), 3010=需重启 (装齐, 重启后生效)。
+function Test-VcRuntime {
+    try {
+        $rk = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', [Microsoft.Win32.RegistryView]::Registry64)
+        $sub = $rk.OpenSubKey('SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64')
+        if ($sub -and $sub.GetValue('Installed') -eq 1) { return $true }
+    } catch { }
+    try {
+        if ((Test-Path 'C:\Windows\System32\vcruntime140.dll') -and (Test-Path 'C:\Windows\System32\msvcp140.dll')) { return $true }
+    } catch { }
+    return $false
+}
+if ($env:TAOZIP_FORCE_RUNTIME_DOWNLOAD -ne '1' -and (Test-VcRuntime)) {
+    Write-RtLog 'vcruntime-present zero-download'
+} else {
+    Write-RtLog 'vcruntime-missing, downloading official redistributable'
+    $vcExe = Join-Path $env:TEMP 'vc_redist.x64.exe'
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile $vcExe -UseBasicParsing
+    } catch {
+        Write-RtLog ("iwr-failed " + $_.Exception.Message + ", fallback to curl.exe")
+        try {
+            $p = Start-Process -FilePath 'curl.exe' -ArgumentList '-L', '-f', '-o', "`"$vcExe`"", '--max-time', '600', '"https://aka.ms/vs/17/release/vc_redist.x64.exe"' -Wait -PassThru -NoNewWindow
+            if ($p.ExitCode -ne 0) { throw "curl exit=$($p.ExitCode)" }
+            if (-not (Test-Path $vcExe) -or (Get-Item $vcExe).Length -lt 1KB) { throw "curl 产物异常偏小" }
+        } catch {
+            Write-RtLog ("download-failed " + $_.Exception.Message)
+            $msg = "TaoZip 需要联网下载系统组件（约 25 MB），当前没有检测到网络连接。`n`n请连上网络后重新运行安装程序即可，无需其他操作。"
+            try {
+                if ([Environment]::UserInteractive) {
+                    Add-Type -AssemblyName System.Windows.Forms
+                    [System.Windows.Forms.MessageBox]::Show($msg, 'TaoZip 安装', 'OK', 'Information') | Out-Null
+                }
+            } catch { }
+            exit 1602
+        }
+    }
+    Write-RtLog 'vcruntime-download-ok, installing silently'
+    try {
+        $p = Start-Process -FilePath $vcExe -ArgumentList '/install', '/quiet', '/norestart' -Wait -PassThru -NoNewWindow
+        Write-RtLog ("vcruntime-installer exit=" + $p.ExitCode)
+        if ($p.ExitCode -eq 1638) { Write-RtLog 'vcruntime-newer-already-installed' }
+        elseif ($p.ExitCode -eq 3010) { Write-RtLog 'vcruntime-installed-reboot-required' }
+        elseif ($p.ExitCode -ne 0) { Write-RtLog 'vcruntime-installer-failed'; exit 31333 }
+    } catch {
+        Write-RtLog ("vcruntime-install failed " + $_.Exception.Message)
+        exit 31335
+    }
+    if (-not (Test-VcRuntime)) { Write-RtLog 'vcruntime-verify-failed'; exit 31333 }
+    Write-RtLog 'vcruntime-download-install ok'
+}
+Write-RtLog 'all-runtimes ok'
 exit 0

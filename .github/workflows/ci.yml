@@ -56,6 +56,35 @@ jobs:
           dotnet restore ZipGo/src/TaoZip.Tests/TaoZip.Tests.csproj
           dotnet run --project ZipGo/src/TaoZip.Tests/TaoZip.Tests.csproj -c Release --no-restore
 
+  win-core-tests:
+    name: Windows 分支补测（D盘路/SafePath 12条 + 覆盖率采集）
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Windows 侧全测（带分支覆盖率采集, 先构建后插桩再 --no-build）
+        shell: pwsh
+        run: |
+          dotnet restore TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj
+          dotnet build TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj -c Release --no-restore
+          dotnet tool install --global coverlet.console --version 10.1.1
+          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.dotnet\tools"
+          # 坑(账本§一10): 插桩后 dotnet test 增量构建会覆盖已插桩程序集致 0 命中——先显式构建、后插桩、再 --no-build
+          coverlet TaoZip.PC/tests/TaoZip.Core.Tests/bin/Release/net10.0/TaoZip.Core.Tests.dll `
+            --target dotnet `
+            --targetargs "test TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj -c Release --no-build --no-restore --nologo" `
+            --output taozip-coverage-win.json --format json
+          dotnet test TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj -c Release --no-build --no-restore --logger "console;verbosity=normal"
+      - name: Windows 覆盖率账归档
+        uses: actions/upload-artifact@v4
+        with:
+          name: taozip-coverage-win
+          path: taozip-coverage-win.json
+        if: always()
+
   pc-build:
     name: Windows 真机层编译（PC 界面工程）
     runs-on: windows-latest

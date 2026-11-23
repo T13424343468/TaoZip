@@ -20,10 +20,25 @@ public partial class App : Application
         InitializeComponent();
         // v78 全局异常落网: 真机白屏若源于进程崩溃, 任何线程的未捕获异常都先落盘 theme.log
         // v79 升级: 带进程身份与调用栈首段, 一次定位崩点
+        // v3.22 崩溃日志随包落盘令 (2026-11-23 老板令): 崩溃信息独立落盘 crash 日志,
+        // 含异常类型/完整堆栈/发生时间/版本号, 不自动上报不碰隐私, 只留用户机器上。
         Current.UnhandledException += (_, e) =>
+        {
+            CrashLog.Write(Role, e.Exception);
             ThemeService.LogEvent($"全局未捕获[{Role}]: {e.Message} | {e.Exception?.GetType().Name}\r\n栈首: {TrimStack(e.Exception?.StackTrace)}");
+        };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            var ex = e.ExceptionObject as Exception;
+            CrashLog.Write(Role + (e.IsTerminating ? "[终止]" : ""), ex);
             ThemeService.LogEvent($"全局未捕获[{Role}][后台线程]: {(e.ExceptionObject as Exception)?.GetType().Name} {(e.ExceptionObject as Exception)?.Message}\r\n栈首: {TrimStack((e.ExceptionObject as Exception)?.StackTrace)}");
+        };
+        // 未观察任务异常同样落盘 (不终止进程, 仅记录, 防任务线程静默吞崩)。
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            CrashLog.Write(Role + "[未观察任务]", e.Exception);
+            e.SetObserved();
+        };
     }
 
     internal static string TrimStack(string? s)

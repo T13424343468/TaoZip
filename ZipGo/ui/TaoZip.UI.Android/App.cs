@@ -24,10 +24,14 @@ public class TaoZipApp : Application
         };
     }
 
-    /// <summary>崩溃日志写外部专属目录（无需权限，卸载即清），写不进再落内部目录。</summary>
+    /// <summary>崩溃日志写外部专属目录（无需权限，卸载即清），写不进再落内部目录。
+    /// v3.22 崩溃日志随包落盘令（2026-11-23 老板令）：补齐版本号，异常类型与完整堆栈随 ex.ToString() 落盘；
+    /// 不自动上报、不收集个人信息，日志只留在用户自己机器上。</summary>
     void WriteCrash(string tag, Exception ex)
     {
-        var line = $"\n==== {DateTime.Now:yyyy-MM-dd HH:mm:ss} [{tag}] ====\n{ex}\n";
+        var ver = "unknown";
+        try { ver = PackageManager?.GetPackageInfo(PackageName ?? "", 0)?.VersionName ?? "unknown"; } catch { }
+        var line = $"\n==== {DateTime.Now:yyyy-MM-dd HH:mm:ss} [{tag}] Version {ver} ====\n{ex}\n";
         try
         {
             var dir = GetExternalFilesDir(null) ?? FilesDir!;

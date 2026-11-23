@@ -19,8 +19,8 @@ public class TaoPathsWindowsTests : IDisposable
 
     public TaoPathsWindowsTests()
     {
-        Assert.True(RuntimeInformation.IsOSPlatform(global::System.Runtime.InteropServices.OSPlatform.Windows),
-            "本组用例仅限 Windows 真机（D 盘分支在 Linux 结构性不可达）");
+        if (!RuntimeInformation.IsOSPlatform(global::System.Runtime.InteropServices.OSPlatform.Windows))
+            throw new global::Xunit.SkipException("本组用例仅限 Windows 真机（D 盘分支在 Linux 结构性不可达）");
         _legacyDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TaoZipWinGapTests");
         Directory.CreateDirectory(_legacyDir);

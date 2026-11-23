@@ -13,14 +13,22 @@ namespace TaoZip.Core.Tests.Unit;
 /// 云端跑批时命中 12 条 D 盘路/SafePath 分支，覆盖率账以 coverlet 实测为准。
 /// </summary>
 [Collection("WindowsOnly")]
+
+/// <summary>仅 Windows 执行: 非 Windows 平台枚举期置 Skip, 不计 Fail (xunit 2.9 无 SkipException, 自定义 FactAttribute 是免依赖正解)。</summary>
+public sealed class WindowsOnlyFactAttribute : global::Xunit.FactAttribute
+{
+    public WindowsOnlyFactAttribute()
+    {
+        if (!RuntimeInformation.IsOSPlatform(global::System.Runtime.InteropServices.OSPlatform.Windows))
+            Skip = "本组用例仅限 Windows 真机（D 盘分支在 Linux 结构性不可达）";
+    }
+}
 public class TaoPathsWindowsTests : IDisposable
 {
     private readonly string _legacyDir;
 
     public TaoPathsWindowsTests()
     {
-        if (!RuntimeInformation.IsOSPlatform(global::System.Runtime.InteropServices.OSPlatform.Windows))
-            throw new global::Xunit.SkipException("本组用例仅限 Windows 真机（D 盘分支在 Linux 结构性不可达）");
         _legacyDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TaoZipWinGapTests");
         Directory.CreateDirectory(_legacyDir);
@@ -31,7 +39,7 @@ public class TaoPathsWindowsTests : IDisposable
         try { Directory.Delete(_legacyDir, true); } catch { }
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void DataDir_D盘可用_落在DataRootOnD下()
     {
         // TaoPaths.cs 25 行 path=1: DDriveAvailable=true → 走 D:\TaoZipData\[appName]
@@ -46,7 +54,7 @@ public class TaoPathsWindowsTests : IDisposable
         File.Delete(probe);
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void DataDir_D盘可用_旧目录迁移到D盘()
     {
         // TaoPaths.cs 29/32 行: D 盘路 + MigrateLegacy 调用（首次创建目录时迁移旧文件）
@@ -63,7 +71,7 @@ public class TaoPathsWindowsTests : IDisposable
         Assert.Equal("{\"k\":1}", File.ReadAllText(migrated));
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void TempDir_D盘可用_落在DataDir的temp下()
     {
         // TaoPaths.cs 52 行 path=0: DDriveAvailable=true → D:\TaoZipData\[appName]\temp
@@ -76,7 +84,7 @@ public class TaoPathsWindowsTests : IDisposable
         File.Delete(probe);
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void MigrateLegacy_旧目录有同名文件_不覆盖D盘新文件()
     {
         // TaoPaths.cs 78 行 path=0/1: File.Exists(dest) 判定两路（已存在不覆盖）
@@ -94,7 +102,7 @@ public class TaoPathsWindowsTests : IDisposable
         Assert.Equal("new-on-d", File.ReadAllText(dest)); // D 盘新文件不被旧文件覆盖
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void MigrateLegacy_旧目录不存在_直接返回()
     {
         // TaoPaths.cs 74 行 path=0: !Directory.Exists(legacyDir) → return
@@ -107,7 +115,7 @@ public class TaoPathsWindowsTests : IDisposable
         Assert.False(Directory.Exists(missing));
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void SafePath_盘符根形态条目_拒收()
     {
         // ArchiveService.cs 313 行 path=1: Path.IsPathRooted(entryName) true（盘符形态 C:\x）
@@ -133,7 +141,7 @@ public class TaoPathsWindowsTests : IDisposable
         }
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public void SafePath_正斜杠根形态条目_拒收()
     {
         // ArchiveService.cs 313 行 path=1: entryName.StartsWith('/') true（/x 形态）

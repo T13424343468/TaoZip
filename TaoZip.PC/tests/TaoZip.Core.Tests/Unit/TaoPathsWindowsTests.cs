@@ -52,6 +52,9 @@ public class TaoPathsWindowsTests : IDisposable
         // TaoPaths.cs 29/32 行: D 盘路 + MigrateLegacy 调用（首次创建目录时迁移旧文件）
         if (!TaoPaths.DDriveAvailable) return;
         File.WriteAllText(Path.Combine(_legacyDir, "legacy-setting.json"), "{\"k\":1}");
+        // 时序: DataDir 仅在目标目录首次创建时触发迁移; 云台可能残留上轮目录, 先清再调
+        var stale = Path.Combine(@"D:\TaoZipData", "TaoZipWinGapTests-Migrate");
+        if (Directory.Exists(stale)) Directory.Delete(stale, true);
         var dir = TaoPaths.DataDir("TaoZipWinGapTests-Migrate");
         Assert.True(Directory.Exists(dir));
         // 迁移断言: 旧 %APPDATA% 内文件应被复制到 D 盘新目录

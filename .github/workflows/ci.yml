@@ -1,4 +1,4 @@
-﻿name: taozip-ci
+name: taozip-ci
 
 on:
   push:
@@ -33,10 +33,24 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: PC 侧全测
+      - name: PC 侧全测（带分支覆盖率采集）
         run: |
           dotnet restore TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj
-          dotnet test TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal"
+          dotnet build TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj -c Release --no-restore
+          dotnet tool install --global coverlet.console --version 10.1.1
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          # 坑(账本§一10): 插桩后 dotnet test 增量构建会覆盖已插桩程序集致 0 命中——先显式构建、后插桩、再 --no-build
+          coverlet TaoZip.PC/tests/TaoZip.Core.Tests/bin/Release/net10.0/TaoZip.Core.Tests.dll \
+            --target dotnet \
+            --targetargs "test TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj -c Release --no-build --no-restore --nologo" \
+            --output taozip-coverage.json --format json
+          dotnet test TaoZip.PC/tests/TaoZip.Core.Tests/TaoZip.Core.Tests.csproj -c Release --no-build --no-restore --logger "console;verbosity=normal"
+      - name: 覆盖率账归档
+        uses: actions/upload-artifact@v4
+        with:
+          name: taozip-coverage
+          path: taozip-coverage.json
+        if: always()
       - name: 安卓侧逻辑全测
         run: |
           dotnet restore ZipGo/src/TaoZip.Tests/TaoZip.Tests.csproj
